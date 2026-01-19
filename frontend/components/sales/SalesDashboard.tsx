@@ -1,33 +1,45 @@
 "use client";
 
+// The color prop should be placed in the salesChart component to avoid the typescript error
+
 import { useEffect, useMemo, useState } from 'react';
 import SalesChart from './SalesChart';
 import SalesFilters from './SalesFilters';
 import SalesTable from './SalesTable';
 import { Sale, SALES_STORAGE_KEY } from './types';
 
-function monthLabel(d: Date) {
+interface SaleWithType extends Sale {
+  type: 'Online' | 'Walk-in';
+}
+
+interface MonthData {
+  label: string;
+  year: number;
+  monthIndex: number;
+  value: string;
+}
+
+function monthLabel(d: Date): string {
   return d.toLocaleString(undefined, { month: 'short' });
 }
 
-function generateSampleSales(): Sale[] {
+function generateSampleSales(): SaleWithType[] {
   const now = new Date();
-  const sales: Sale[] = [];
-  // generate 8-20 sales per month for last 12 months with varying amounts
+  const sales: SaleWithType[] = [];
   for (let m = 11; m >= 0; m--) {
-    const month = new Date(now.getFullYear(), now.getMonth() - m, 15);
-    const entries = 6 + Math.floor(Math.random() * 8);
+    const month = new Date(now.getFullYear(), now.getMonth() - m, 1);
+    const entries = 6;
     for (let i = 0; i < entries; i++) {
-      const date = new Date(month.getFullYear(), month.getMonth(), 1 + Math.floor(Math.random() * 27), Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
-      const qty = 1 + Math.floor(Math.random() * 5);
-      const price = Math.round((5 + Math.random() * 95) * 100) / 100;
+      const date = new Date(month.getFullYear(), month.getMonth(), 1 + i);
+      const qty = 1 + Math.floor(Math.random() * 3);
       sales.push({
         id: `s-${date.getTime()}-${i}`,
         date: date.toISOString(),
-        productName: ['Hydrating Serum', 'Daily Cleanser', 'Face Mask', 'Sunscreen'][Math.floor(Math.random() * 4)],
-        supplier: ['Acme Suppliers', 'Pure Trade', 'Global Goods'][Math.floor(Math.random() * 3)],
+        productName: ['Fries', 'Fish', 'Beverages', 'Chicken'][Math.floor(Math.random() * 4)],
+        supplier: 'Default Supplier',
         quantity: qty,
-        amount: +(qty * price).toFixed(2),
+        amount: qty * (15 + Math.random() * 20),
+        type: Math.random() > 0.5 ? 'Online' : 'Walk-in'
       });
     }
   }
@@ -35,196 +47,249 @@ function generateSampleSales(): Sale[] {
 }
 
 export default function SalesDashboard() {
-  const [sales, setSales] = useState<Sale[]>([]);
+  const [sales, setSales] = useState<SaleWithType[]>([]);
   const [month, setMonth] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SALES_STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw) setSales(JSON.parse(raw));
       else {
         const sample = generateSampleSales();
         setSales(sample);
         localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sample));
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       setSales(generateSampleSales());
     }
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales));
-    } catch {}
+    localStorage.setItem(SALES_STORAGE_KEY, JSON.stringify(sales));
   }, [sales]);
 
-  // monthly totals for last 12 months (ordered oldest->newest)
-  const last12 = useMemo(() => {
+  const chartData = useMemo(() => {
     const now = new Date();
-    const months: { label: string; year: number; monthIndex: number; value: string }[] = [];
+    const months: MonthData[] = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      months.push({ label: `${monthLabel(d)} ${d.getFullYear()}`, year: d.getFullYear(), monthIndex: d.getMonth(), value });
+      months.push({ label: monthLabel(d), year: d.getFullYear(), monthIndex: d.getMonth(), value });
     }
 
-    const totals = months.map((m) => {
-      const sum = sales
-        .filter((s) => {
-          const d = new Date(s.date);
-          return d.getFullYear() === m.year && d.getMonth() === m.monthIndex;
-        })
-        .reduce((a, b) => a + b.amount, 0);
-      return sum;
-    });
+    const onlineTotals = months.map(m => 
+      sales.filter(s => {
+        const d = new Date(s.date);
+        return s.type === 'Online' && d.getFullYear() === m.year && d.getMonth() === m.monthIndex;
+      }).reduce((a, b) => a + b.amount, 0)
+    );
 
-    return { months, totals };
+    const walkInTotals = months.map(m => 
+      sales.filter(s => {
+        const d = new Date(s.date);
+        return s.type === 'Walk-in' && d.getFullYear() === m.year && d.getMonth() === m.monthIndex;
+      }).reduce((a, b) => a + b.amount, 0)
+    );
+
+    return { months: months.map(m => m.label), onlineTotals, walkInTotals, rawMonths: months };
   }, [sales]);
 
-  // apply filters for table
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
-      const d = new Date(s.date);
       if (month) {
-        // month is 'YYYY-MM'
+        const d = new Date(s.date);
         const [y, m] = month.split('-').map(Number);
         if (d.getFullYear() !== y || d.getMonth() + 1 !== m) return false;
       }
-      if (query) {
-        const ql = query.toLowerCase();
-        if (!(`${s.productName} ${s.supplier || ''}`.toLowerCase().includes(ql))) return false;
-      }
       return true;
     });
-  }, [sales, month, query]);
+  }, [sales, month]);
 
-  function handleDelete(id: string) {
-    setSales((s) => s.filter((x) => x.id !== id));
-  }
+  const onlineSales = filteredSales.filter(s => s.type === 'Online');
+  const walkInSales = filteredSales.filter(s => s.type === 'Walk-in');
 
-  function addSale(sale: Omit<Sale, 'id'>) {
-    const newSale: Sale = { id: `s-${Date.now()}`, ...sale };
+  function addSale(sale: Omit<SaleWithType, 'id'>) {
+    const newSale: SaleWithType = { id: `s-${Date.now()}`, ...sale };
     setSales((arr) => [newSale, ...arr]);
+    setMonth(null); 
   }
 
-  function exportCSV() {
-    const headers = ['date', 'product', 'supplier', 'quantity', 'amount'];
-    const rows = filteredSales.map((s) => [s.date, s.productName, s.supplier ?? '', String(s.quantity), String(s.amount)]);
-    const csv = [headers, ...rows].map((r) => r.map((c) => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+  const exportToCSV = () => {
+    const headers = ["Date", "Type", "Item", "Supplier", "Qty", "Total"];
+    const rows = filteredSales.map(s => [
+      new Date(s.date).toLocaleDateString(),
+      s.type,
+      s.productName,
+      s.supplier || "N/A",
+      s.quantity,
+      s.amount.toFixed(2)
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sales-export-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+    link.setAttribute("href", url);
+    link.setAttribute("download", `sales_report_${month || 'all_time'}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-[#fafafa] p-8 text-slate-900 font-sans">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-emerald-900">Sales</h1>
-          <p className="text-sm text-emerald-600">Sales performance and recent transactions.</p>
+          <h1 className="text-3xl font-light tracking-tight text-slate-800">Sales <span className="font-semibold">Ledger</span></h1>
+          <p className="text-sm text-slate-500 mt-1">Sales performance and recent transactions</p>
         </div>
+        
+        {/* TOP RIGHT ACTIONS */}
         <div className="flex items-center gap-3">
-          <button onClick={exportCSV} className="px-3 py-2 bg-emerald-800 text-white rounded">Export CSV</button>
+          <button 
+            onClick={exportToCSV}
+            className="px-4 py-2 bg-green-700 hover:bg-slate-200 text-white text-[11px] font-bold uppercase tracking-widest rounded transition-colors border border-slate-200"
+          >
+            Export CSV
+          </button>
+          <SalesFilters 
+            month={month} 
+            months={chartData.rawMonths.map(m=>({label:`${m.label} ${m.year}`,value:m.value}))} 
+            onMonth={setMonth} 
+          />
         </div>
       </div>
 
-      <div className="bg-white border rounded-lg p-4 shadow-sm">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div>
-                  <div className="text-xs text-gray-500">Revenue (12m)</div>
-                  <div className="text-2xl font-semibold text-emerald-900">${last12.totals.reduce((a,b)=>a+b,0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Orders (12m)</div>
-                  <div className="text-2xl font-semibold text-emerald-900">{sales.length}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">Avg Order</div>
-                  <div className="text-2xl font-semibold text-emerald-900">${(sales.reduce((a,b)=>a+b.amount,0)/Math.max(1,sales.length)).toFixed(2)}</div>
-                </div>
-              </div>
-              <div>
-                <SalesFilters month={month} months={last12.months.map(m=>({label:m.label,value:m.value}))} onMonth={setMonth} />
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+              <h3 className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-4">Online Revenue Timeline</h3>
+              <div className="h-50">
+                <SalesChart months={chartData.months} totals={chartData.onlineTotals} color="#2563eb" />
               </div>
             </div>
-
-            <div className="mt-2">
-              <SalesChart months={last12.months.map(m=>m.label)} totals={last12.totals} />
+            <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+              <h3 className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-4">Walk-in Revenue Timeline</h3>
+              <div className="h-50">
+                <SalesChart months={chartData.months} totals={chartData.walkInTotals} color="#10b981" />
+              </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="p-3 border rounded">
-              <h4 className="text-sm font-medium text-emerald-800 mb-2">Record Sale</h4>
-              <RecordSaleForm onSave={(s)=>addSale(s)} />
+          <div className="bg-transparent overflow-hidden">
+            <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-200 flex justify-between items-center">
+              <h2 className="text-xs font-bold text-slate-600 uppercase tracking-widest">Online Transactions</h2>
+              <div className="text-sm font-semibold text-blue-600">${onlineSales.reduce((a,b)=>a+b.amount,0).toFixed(2)}</div>
             </div>
+            <SalesTable sales={onlineSales} />
+          </div>
 
-            <div className="p-3 border rounded">
-              <h4 className="text-sm font-medium text-emerald-800 mb-1">Insights</h4>
-              <div className="text-sm text-gray-600">Top product: <span className="font-medium text-emerald-900">{topProduct(sales)}</span></div>
-              <div className="text-sm text-gray-600 mt-1">Last month revenue: <span className="font-medium text-emerald-900">${lastMonthRevenue(sales).toFixed(2)}</span></div>
+          <div className="bg-transparent overflow-hidden">
+            <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-200 flex justify-between items-center">
+              <h2 className="text-xs font-bold text-slate-600 uppercase tracking-widest">Walk-in Transactions</h2>
+              <div className="text-sm font-semibold text-emerald-600">${walkInSales.reduce((a,b)=>a+b.amount,0).toFixed(2)}</div>
             </div>
+            <SalesTable sales={walkInSales} />
           </div>
         </div>
 
-        <div>
-          <SalesTable sales={filteredSales} onDelete={handleDelete} />
+        <div className="lg:col-span-4 space-y-8">
+          <div className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm">
+            <h4 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-5">Record Sale</h4>
+            <RecordSaleForm onSave={addSale} />
+          </div>
+
+          <div className="bg-white border border-slate-200 p-6 rounded-xl shadow-sm">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Quick Analysis</h4>
+            <div className="space-y-4">
+              <div className="flex justify-between items-end border-b border-slate-100 pb-3">
+                <span className="text-xs text-slate-500">Leading Category</span>
+                <span className="text-sm font-medium">{topProduct(sales)}</span>
+              </div>
+              <div className="flex justify-between items-end">
+                <span className="text-xs text-slate-500">Gross Total</span>
+                <span className="text-sm font-semibold">${filteredSales.reduce((a,b)=>a+b.amount,0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function lastMonthRevenue(sales: Sale[]) {
-  const now = new Date();
-  const last = new Date(now.getFullYear(), now.getMonth()-1, 1);
-  const y = last.getFullYear();
-  const m = last.getMonth();
-  return sales.filter(s=>{ const d=new Date(s.date); return d.getFullYear()===y && d.getMonth()===m }).reduce((a,b)=>a+b.amount,0);
+function RecordSaleForm({onSave}:{onSave:(s:Omit<SaleWithType,'id'>)=>void}){
+  const [date, setDate] = useState(new Date().toISOString().slice(0,16));
+  const [productName, setProductName] = useState('');
+  const [supplier, setSupplier] = useState('');
+  const [type, setType] = useState<'Online' | 'Walk-in'>('Online');
+  const [quantity, setQuantity] = useState(1);
+  const [amount, setAmount] = useState(0);
+
+  function submit(e:React.FormEvent){
+    e.preventDefault();
+    onSave({ date: new Date(date).toISOString(), productName, supplier: supplier || undefined, quantity, amount, type });
+    setProductName(''); 
+    setSupplier(''); 
+    setQuantity(1); 
+    setAmount(0);
+    setDate(new Date().toISOString().slice(0,16));
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div className="flex p-1 bg-slate-100 rounded-lg">
+        <button type="button" onClick={() => setType('Online')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${type === 'Online' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>ONLINE</button>
+        <button type="button" onClick={() => setType('Walk-in')} className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${type === 'Walk-in' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}>WALK-IN</button>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[10px] font-semibold text-slate-400 uppercase">Transaction Date</label>
+        <input 
+          type="datetime-local" 
+          value={date} 
+          onChange={(e)=>setDate(e.target.value)} 
+          className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:border-slate-400" 
+        />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[10px] font-semibold text-slate-400 uppercase">Item Description</label>
+        <input required placeholder="e.g. Chicken" value={productName} onChange={(e)=>setProductName(e.target.value)} className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:border-slate-400 transition-colors" />
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-[10px] font-semibold text-slate-400 uppercase">Supplier</label>
+        <input placeholder="Source..." value={supplier} onChange={(e)=>setSupplier(e.target.value)} className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm outline-none focus:border-slate-400 transition-colors" />
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase">Qty</label>
+          <input type="number" min={1} value={quantity} onChange={(e)=>setQuantity(Number(e.target.value))} className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm outline-none" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-semibold text-slate-400 uppercase">Total $</label>
+          <input type="number" step="0.01" value={amount} onChange={(e)=>setAmount(Number(e.target.value))} className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm outline-none" />
+        </div>
+      </div>
+      
+      <button type="submit" className={`w-full py-2.5 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm mt-2 ${type === 'Online' ? 'bg-blue-600' : 'bg-emerald-600'}`}>
+        Record {type} Sale
+      </button>
+    </form>
+  );
 }
 
-function topProduct(sales: Sale[]) {
+function topProduct(sales: SaleWithType[]): string {
   const map: Record<string, number> = {};
   sales.forEach(s=> map[s.productName] = (map[s.productName]||0) + s.amount);
   const entries = Object.entries(map);
   if (entries.length===0) return '—';
   entries.sort((a,b)=>b[1]-a[1]);
   return entries[0][0];
-}
-
-function RecordSaleForm({onSave}:{onSave:(s:Omit<Sale,'id'>)=>void}){
-  const [date, setDate] = useState(new Date().toISOString().slice(0,16));
-  const [productName, setProductName] = useState('');
-  const [supplier, setSupplier] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [amount, setAmount] = useState(0);
-
-  function submit(e:React.FormEvent){
-    e.preventDefault();
-    onSave({ date: new Date(date).toISOString(), productName, supplier: supplier||undefined, quantity, amount });
-    setProductName(''); setSupplier(''); setQuantity(1); setAmount(0); setDate(new Date().toISOString().slice(0,16));
-  }
-
-  return (
-    <form onSubmit={submit} className="grid grid-cols-1 gap-2">
-      <input type="datetime-local" value={date} onChange={(e)=>setDate(e.target.value)} className="w-full border rounded px-2 py-1" />
-      <input required placeholder="Product name" value={productName} onChange={(e)=>setProductName(e.target.value)} className="w-full border rounded px-2 py-1" />
-      <input placeholder="Supplier" value={supplier} onChange={(e)=>setSupplier(e.target.value)} className="w-full border rounded px-2 py-1" />
-      <div className="grid grid-cols-2 gap-2">
-        <input type="number" min={1} value={quantity} onChange={(e)=>setQuantity(Number(e.target.value))} className="w-full border rounded px-2 py-1" />
-        <input type="number" step="0.01" min={0} value={amount} onChange={(e)=>setAmount(Number(e.target.value))} className="w-full border rounded px-2 py-1" />
-      </div>
-      <div className="flex justify-end">
-        <button type="submit" className="px-3 py-2 bg-emerald-800 text-white rounded">Save</button>
-      </div>
-    </form>
-  );
 }

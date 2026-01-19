@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-// Added Lucide icons for a modern feel
 import { 
   LayoutDashboard, 
   Receipt, 
   Package, 
   Truck, 
   Users, 
-  LogOut 
+  LogOut,
+  X // Added close icon
 } from 'lucide-react';
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -28,14 +28,18 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
+      {/* Updated mobile overlay: Transparent background, click to close */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-transparent md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar - Updated to a deep Forest/Slate Green theme */}
       <motion.aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-green-900 text-white transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-center h-16 bg-emerald-600">
+        <div className="flex items-center justify-between h-16 bg-emerald-700 px-4">
           <span className="text-2xl font-bold tracking-tight">Admin</span>
+          {/* Close icon visible only on mobile */}
+          <button onClick={() => setSidebarOpen(false)} className="md:hidden text-white">
+            <X size={24} />
+          </button>
         </div>
         
         <nav className="mt-5 px-3 space-y-1">
@@ -48,8 +52,8 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
                 href={item.href} 
                 className={`group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all ${
                   isActive 
-                    ? 'bg-emerald-500/10 text-emerald-400 border-r-4 border-emerald-500' 
-                    : 'text-white hover:bg-white/5 hover:text-white'
+                    ? 'bg-emerald-500/10 text-emerald-400  border-emerald-400' 
+                    : 'text-white hover:text-white'
                 }`} 
                 onClick={() => setSidebarOpen(false)}
               >
@@ -61,7 +65,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         </nav>
 
         <div className="absolute bottom-0 w-full p-4 border-t border-white/10">
-          <Link href="/" className="flex items-center gap-3 text-gray-400 hover:text-red-400 transition-colors px-3 py-2">
+          <Link href="/" className="flex items-center gap-3 text-red-400 hover:text-red-600 transition-colors px-3 py-2">
             <LogOut className="h-5 w-5" />
             <span className="text-sm font-medium">Logout</span>
           </Link>
@@ -81,7 +85,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
           </div>
         </header>
 
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

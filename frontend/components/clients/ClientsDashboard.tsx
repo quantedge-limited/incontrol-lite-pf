@@ -35,7 +35,10 @@ export default function ClientsDashboard() {
   }
 
   function deleteClient(id: string) { 
-    setClients(s => s.filter(x => x.id !== id)); 
+    const confirmed = window.confirm("Are you sure you would love to delete the respective client?");
+    if (confirmed) {
+      setClients(s => s.filter(x => x.id !== id)); 
+    }
   }
 
   const filtered = useMemo(() => {

@@ -28,7 +28,14 @@ export default function SupplierDashboard(){
   useEffect(()=>{ try{ localStorage.setItem(PURCHASES_KEY, JSON.stringify(purchases)); }catch{} }, [purchases]);
 
   function addSupplier(s: Supplier){ setSuppliers((sarr) => [s, ...sarr]); }
-  function deleteSupplier(id: string){ setSuppliers((arr)=>arr.filter(x=>x.id!==id)); }
+
+  function deleteSupplier(id: string){ 
+    const confirmed = window.confirm("Are you sure you would love to delete the respective supplier?");
+    if (confirmed) {
+      setSuppliers((arr)=>arr.filter(x=>x.id!==id)); 
+    }
+  }
+
   function addPurchase(p: Purchase){ setPurchases((arr)=> [p, ...arr]); }
 
   // Logic: Filter and Show Top 10

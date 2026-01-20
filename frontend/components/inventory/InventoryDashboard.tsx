@@ -10,6 +10,7 @@ import { Product, STORAGE_KEY } from './types';
 import { toast, ToastContainer } from 'react-toastify';
 
 
+// Matching your business menu context (fries, fish, beverages, chicken)
 const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'p-1',
@@ -62,6 +63,7 @@ export default function InventoryDashboard() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
   }, [products]);
 
+  // Analytics for the widgets
   const stats = useMemo(() => {
     const totalValue = products.reduce((acc, p) => acc + (p.price * p.quantity), 0);
     const lowStock = products.filter(p => p.quantity > 0 && p.quantity <= LOW_STOCK_THRESHOLD).length;
@@ -127,14 +129,13 @@ export default function InventoryDashboard() {
         return `${p.name} ${p.brand} ${p.supplier}`.toLowerCase().includes(q);
       }
       return true;
-    }).slice(0, 10);
+    }).slice(0, 10); // Keeping the Top 10 rhyme
   }, [products, brandFilter, supplierFilter, query]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-6 animate-in fade-in duration-500">
-      {/* 3. Added ToastContainer to render the messages */}
-      <ToastContainer />
       
+      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-emerald-100 pb-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-emerald-950">Inventory Directory</h1>
@@ -156,6 +157,7 @@ export default function InventoryDashboard() {
         </div>
       </div>
 
+      {/* Inventory Status Widgets */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-emerald-100 p-4 rounded-xl shadow-sm">
           <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">In Stock</p>
@@ -177,7 +179,10 @@ export default function InventoryDashboard() {
 
       <LowStockAlert products={products} threshold={LOW_STOCK_THRESHOLD} />
 
+      {/* Main Content */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+        
+        {/* Filters and Add Form */}
         <div className="xl:col-span-4 space-y-6">
           <div className="bg-white border border-emerald-100 rounded-xl shadow-sm overflow-hidden p-5">
             <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-widest mb-4">Search & Filter</h3>
@@ -205,6 +210,7 @@ export default function InventoryDashboard() {
           )}
         </div>
 
+        {/* Product Table */}
         <div className={`xl:col-span-8 ${showMobileTable ? 'block' : 'hidden xl:block'}`}>
           <div className="bg-white border border-emerald-100 rounded-xl shadow-sm overflow-hidden">
             <div className="bg-emerald-50/50 border-b border-emerald-100 px-5 py-4 flex justify-between items-center">
@@ -216,12 +222,8 @@ export default function InventoryDashboard() {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
 }
-
-
-//the "0" in input field has to be initialized and changed in th product form.jsx
-
-// made all changes

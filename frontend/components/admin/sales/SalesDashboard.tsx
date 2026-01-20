@@ -181,13 +181,13 @@ export default function SalesDashboard() {
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
               <h3 className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-4">Online Revenue</h3>
               <div className="h-50">
-                <SalesChart months={chartData.months} totals={chartData.onlineTotals} color="#2563eb" />
+                <SalesChart months={chartData.months} totals={chartData.onlineTotals} />
               </div>
             </div>
             <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
               <h3 className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-4">Walk-in Revenue</h3>
               <div className="h-50">
-                <SalesChart months={chartData.months} totals={chartData.walkInTotals} color="#10b981" />
+                <SalesChart months={chartData.months} totals={chartData.walkInTotals} />
               </div>
             </div>
           </div>

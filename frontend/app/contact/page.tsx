@@ -6,10 +6,10 @@ import {Footer} from '@/components/frontpage/Footer/Footer';
 
 export default function Page() {
   return (
-    <div className="max-w-7xl mx-auto">
+    <>
       <Header onCartClick={() => {}} />
       <Contact />
       <Footer />
-    </div>
+    </>
   );
 }

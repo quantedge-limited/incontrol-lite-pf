@@ -1,6 +1,6 @@
 "use client";
 
-import InventoryDashboard from '@/components/inventory/InventoryDashboard';
+import InventoryDashboard from '@/components/admin/inventory/InventoryDashboard';
 
 export default function Page() {
   return (

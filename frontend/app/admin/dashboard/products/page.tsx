@@ -1,11 +1,11 @@
 "use client";
 
-import OverviewDashboard from '@/components/admin/overview/OverviewDashboard';
+import ProductsDashboard from '@/components/admin/products/ProductsDashboard';
 
 export default function Page() {
   return (
     <div className="max-w-7xl mx-auto">
-      <OverviewDashboard />
+      <ProductsDashboard />
     </div>
   );
 }

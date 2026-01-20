@@ -53,13 +53,13 @@ export const About: React.FC = () => {
           >
             <h3 className="text-3xl font-bold text-gray-900 mb-6">Who We Are</h3>
             <p className="text-gray-600 mb-4 leading-relaxed">
-              Mams Entreprise is dedicated to providing premium sanitary and wellness products that empower women to feel confident and comfortable every day. Based in DCI Juja, we believe that quality care shouldn't be a luxury.
+              Mams Enterprise is dedicated to providing premium sanitary and wellness products that empower women to feel confident and comfortable every day. Based in DCI Juja, we believe that quality care shouldn&apos;t be a luxury.
             </p>
             <p className="text-gray-600 mb-4 leading-relaxed">
               Our carefully curated collection of products is sourced from trusted suppliers who share our commitment to quality, safety, and sustainability. Every product undergoes rigorous testing to ensure it meets the highest standards.
             </p>
             <p className="text-gray-600 leading-relaxed">
-              We're more than just a store—we're a wellness partner committed to your health and happiness.
+              We&apos;re more than just a store—we&apos;re a wellness partner committed to your health and happiness.
             </p>
           </motion.div>
 
@@ -92,7 +92,7 @@ export const About: React.FC = () => {
             </div>
             <h4 className="text-2xl font-bold text-gray-900 mb-4">Our Mission</h4>
             <p className="text-gray-600 leading-relaxed">
-              To revolutionize women's wellness by providing accessible, high-quality sanitary products that prioritize comfort, health, and environmental responsibility.
+              To revolutionize women&apos;s wellness by providing accessible, high-quality sanitary products that prioritize comfort, health, and environmental responsibility.
             </p>
           </motion.div>
 
@@ -109,7 +109,7 @@ export const About: React.FC = () => {
             </div>
             <h4 className="text-2xl font-bold text-gray-900 mb-4">Our Vision</h4>
             <p className="text-gray-600 leading-relaxed">
-              To be East Africa's most trusted brand in women's wellness, known for innovation, quality, and a genuine commitment to every customer's health journey.
+              To be East Africa&apos;s most trusted brand in women&apos;s wellness, known for innovation, quality, and a genuine commitment to every customer&apos;s health journey.
             </p>
           </motion.div>
 

@@ -223,3 +223,5 @@ export default function InventoryDashboard() {
 
 
 //the "0" in input field has to be initialized and changed in th product form.jsx
+
+// made all changes

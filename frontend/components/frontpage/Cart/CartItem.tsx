@@ -22,7 +22,7 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#e6f7fb'}
     >
       {/* Image */}
-      <div className="w-20 h-20 rounded-lg flex-shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #5fb3cc 0%, #0091AD 100%)' }}>
+      <div className="w-20 h-20 rounded-lg shrink-0 flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #5fb3cc 0%, #0091AD 100%)' }}>
         <span className="text-white font-bold text-sm text-center">{item.name.slice(0, 2).toUpperCase()}</span>
       </div>
 

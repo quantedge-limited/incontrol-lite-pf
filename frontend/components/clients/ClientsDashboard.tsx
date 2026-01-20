@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Client, CLIENTS_KEY } from './types';
 import ClientForm from './ClientForm';
 import ClientsTable from './ClientsTable';
+// 1. Added Toastify imports
+import { toast, ToastContainer } from 'react-toastify';
 
 function loadClients(): Client[] { 
   try { 

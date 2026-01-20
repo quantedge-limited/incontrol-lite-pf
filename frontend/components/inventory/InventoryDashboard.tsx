@@ -6,6 +6,9 @@ import ProductForm from './ProductForm';
 import LowStockAlert from './LowStockAlert';
 import Filters from './Filters';
 import { Product, STORAGE_KEY } from './types';
+// 1. Added Toastify imports
+import { toast, ToastContainer } from 'react-toastify';
+
 
 // Matching your business menu context (fries, fish, beverages, chicken)
 const SAMPLE_PRODUCTS: Product[] = [
@@ -75,14 +78,46 @@ export default function InventoryDashboard() {
   function handleAdd(product: Product) {
     setProducts((s) => [product, ...s]);
     setIsAdding(false);
+    toast.success("Product added successfully!");
   }
 
+  // 2. Modified handleDelete to include confirmation logic
   function handleDelete(id: string) {
-    setProducts((s) => s.filter((p) => p.id !== id));
+    const confirmDelete = ({ closeToast }: { closeToast: () => void }) => (
+      <div className="p-1">
+        <p className="text-sm font-medium mb-3">Are you sure you want to delete this inventory item?</p>
+        <div className="flex gap-2 justify-end">
+          <button 
+            onClick={closeToast}
+            className="px-3 py-1 text-xs bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => {
+              setProducts((s) => s.filter((p) => p.id !== id));
+              toast.success("Item deleted.");
+              closeToast();
+            }}
+            className="px-3 py-1 text-xs bg-rose-600 text-white rounded hover:bg-rose-700 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    );
+
+    toast.warn(confirmDelete, {
+      position: "top-center",
+      autoClose: false,
+      closeOnClick: false,
+      draggable: false,
+    });
   }
 
   function handleUpdate(updated: Product) {
     setProducts((s) => s.map((p) => (p.id === updated.id ? updated : p)));
+    toast.info("Inventory updated.");
   }
 
   const filtered = useMemo(() => {

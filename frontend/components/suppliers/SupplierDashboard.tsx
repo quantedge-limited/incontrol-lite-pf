@@ -5,6 +5,9 @@ import { Supplier, SUPPLIERS_KEY, Purchase, PURCHASES_KEY } from './types';
 import SupplierForm from './SupplierForm';
 import SupplierTable from './SupplierTable';
 import SupplierDetails from './SupplierDetails';
+import { toast, ToastContainer } from 'react-toastify';
+// FIX: Added required CSS for toastify to actually appear
+
 
 function loadSuppliers(): Supplier[] {
   try {
@@ -14,18 +17,23 @@ function loadSuppliers(): Supplier[] {
 }
 
 function loadPurchases(): Purchase[] {
-  try { const raw = localStorage.getItem(PURCHASES_KEY); return raw?JSON.parse(raw):[]; } catch { return []; }
+  try { 
+    const raw = localStorage.getItem(PURCHASES_KEY); 
+    return raw ? JSON.parse(raw) : []; 
+  } catch { return []; }
 }
 
-export default function SupplierDashboard(){
+export default function SupplierDashboard() {
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => loadSuppliers());
   const [purchases, setPurchases] = useState<Purchase[]>(() => loadPurchases());
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Supplier | null>(null);
   const [showMobileTable, setShowMobileTable] = useState(false);
 
-  useEffect(()=>{ try{ localStorage.setItem(SUPPLIERS_KEY, JSON.stringify(suppliers)); }catch{} }, [suppliers]);
-  useEffect(()=>{ try{ localStorage.setItem(PURCHASES_KEY, JSON.stringify(purchases)); }catch{} }, [purchases]);
+  function addSupplier(s: Supplier) { 
+    setSuppliers((sarr) => [s, ...sarr]); 
+    toast.success("Supplier added!");
+  }
 
   function addSupplier(s: Supplier){ setSuppliers((sarr) => [s, ...sarr]); }
 
@@ -36,7 +44,15 @@ export default function SupplierDashboard(){
     }
   }
 
-  function addPurchase(p: Purchase){ setPurchases((arr)=> [p, ...arr]); }
+    toast.warn(<Msg closeToast={function (): void {
+      throw new Error('Function not implemented.');
+    } } />, {
+      position: "top-center",
+      autoClose: false,
+      closeOnClick: false,
+      draggable: false,
+    });
+  }
 
   // Logic: Filter and Show Top 10
   const displayedSuppliers = useMemo(()=>{

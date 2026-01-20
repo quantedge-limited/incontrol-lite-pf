@@ -1,6 +1,6 @@
 "use client";
 
-import SalesDashboard from '@/components/sales/SalesDashboard';
+import SalesDashboard from '@/components/admin/sales/SalesDashboard';
 
 export default function Page() {
   return (

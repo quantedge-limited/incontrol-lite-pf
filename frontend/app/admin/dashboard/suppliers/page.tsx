@@ -1,6 +1,6 @@
 "use client";
 
-import SupplierDashboard from '@/components/suppliers/SupplierDashboard';
+import SupplierDashboard from '@/components/admin/suppliers/SupplierDashboard';
 
 export default function Page() {
   return (

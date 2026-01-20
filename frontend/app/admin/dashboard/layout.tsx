@@ -24,6 +24,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     { name: 'Inventory', href: '/admin/dashboard/inventory', icon: Package },
     { name: 'Suppliers', href: '/admin/dashboard/suppliers', icon: Truck },
     { name: 'Clients', href: '/admin/dashboard/clients', icon: Users },
+    {name: 'Products', href: '/admin/dashboard/products', icon: Package},
   ];
 
   return (

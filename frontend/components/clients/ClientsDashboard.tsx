@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Client, CLIENTS_KEY } from './types';
 import ClientForm from './ClientForm';
 import ClientsTable from './ClientsTable';
+// 1. Added Toastify imports
+import { toast, ToastContainer } from 'react-toastify';
+
 
 function loadClients(): Client[] { 
   try { 
@@ -17,9 +20,7 @@ function loadClients(): Client[] {
 export default function ClientsDashboard() {
   const [clients, setClients] = useState<Client[]>(() => loadClients());
   const [query, setQuery] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selected, setSelected] = useState<Client | null>(null);
-  // State to toggle table visibility on small/medium screens
   const [showMobileTable, setShowMobileTable] = useState(false);
 
   useEffect(() => { 
@@ -32,13 +33,45 @@ export default function ClientsDashboard() {
 
   function addClient(c: Client) { 
     setClients(s => [c, ...s]); 
+    toast.success("Client registered successfully!");
   }
 
+  // 2. Updated deletion logic with Toastify custom confirmation
   function deleteClient(id: string) { 
-    const confirmed = window.confirm("Are you sure you would love to delete the respective client?");
-    if (confirmed) {
-      setClients(s => s.filter(x => x.id !== id)); 
-    }
+    const Msg = ({ closeToast }: { closeToast: () => void }) => (
+      <div className="flex flex-col gap-3">
+        <p className="text-sm font-medium text-emerald-950">
+          Are you sure you want to delete this client?
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button 
+            onClick={closeToast}
+            className="px-3 py-1 text-xs bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={() => {
+              setClients(s => s.filter(x => x.id !== id)); 
+              toast.success("Client record removed.");
+              closeToast();
+            }}
+            className="px-3 py-1 text-xs bg-rose-600 text-white rounded hover:bg-rose-700 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    );
+
+    toast.warn(<Msg closeToast={function (): void {
+      throw new Error('Function not implemented.');
+    } } />, {
+      position: "top-center",
+      autoClose: false,
+      closeOnClick: false,
+      draggable: false,
+    });
   }
 
   const filtered = useMemo(() => {
@@ -51,6 +84,9 @@ export default function ClientsDashboard() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-6 animate-in fade-in duration-500">
+      {/* 3. Toast Container added to render messages */}
+      <ToastContainer />
+
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-emerald-100 pb-6">
         <div>
@@ -62,7 +98,6 @@ export default function ClientsDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-            {/* Toggle Button for mobile/tablet only */}
             <button 
               onClick={() => setShowMobileTable(!showMobileTable)}
               className="xl:hidden px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm"
@@ -92,7 +127,7 @@ export default function ClientsDashboard() {
           </div>
         </div>
 
-        {/* Main: Table Container - Conditional visibility on sm/md based on showMobileTable */}
+        {/* Main: Table Container */}
         <div className={`xl:col-span-8 ${showMobileTable ? 'block' : 'hidden xl:block'}`}>
           <div className="bg-white border border-emerald-100 shadow-sm overflow-hidden">
             <div className="bg-emerald-50/50 border-b border-emerald-100 px-5 py-4 flex justify-between items-center">
@@ -100,13 +135,17 @@ export default function ClientsDashboard() {
                 Client List
               </h3>
             </div>
+            
+            {/* 4. Improved Horizontal Scroll: Added min-width to force sliding on mobile */}
             <div className="p-0 overflow-x-auto">
-              <ClientsTable 
-                clients={filtered} 
-                onView={(c) => setSelected(c)} 
-                onDelete={deleteClient} 
-                onSearch={setQuery} 
-              />
+              <div className="min-w-150 w-full">
+                <ClientsTable 
+                  clients={filtered} 
+                  onView={(c) => setSelected(c)} 
+                  onDelete={deleteClient} 
+                  onSearch={setQuery} 
+                />
+              </div>
             </div>
           </div>
         </div>

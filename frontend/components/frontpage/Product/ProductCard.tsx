@@ -1,9 +1,11 @@
+// components/frontpage/Product/ProductCard.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Check } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { apiService } from '@/services/api';
 
 interface ProductCardProps {
   id: string;
@@ -12,6 +14,8 @@ interface ProductCardProps {
   description: string;
   inStock: boolean;
   image: string;
+  quantity: number;
+  productId?: number; // Add productId for backend
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -21,20 +25,51 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   description,
   inStock,
   image,
+  quantity,
+  productId,
 }) => {
   const { addToCart } = useCart();
   const [isAdded, setIsAdded] = useState(false);
+  const [currentQuantity, setCurrentQuantity] = useState(quantity);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAddToCart = () => {
-    addToCart({
-      id,
-      name,
-      price,
-      image,
-    });
-    setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 2000);
+  useEffect(() => {
+    setCurrentQuantity(quantity);
+  }, [quantity]);
+
+  const handleAddToCart = async () => {
+    if (currentQuantity <= 0 || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      // Add to cart in backend and frontend
+      await addToCart({
+        id,
+        name,
+        price,
+        image,
+        productId: productId || parseInt(id),
+      });
+
+      // Update local quantity
+      setCurrentQuantity(prev => prev - 1);
+      setIsAdded(true);
+
+      // Update inventory in backend
+      await apiService.updateInventoryItem(id, {
+        quantity: currentQuantity - 1
+      });
+
+      setTimeout(() => setIsAdded(false), 2000);
+    } catch (error) {
+      console.error('Failed to add to cart:', error);
+      // You might want to show an error message to the user
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const isInStock = currentQuantity > 0;
 
   return (
     <motion.div
@@ -49,7 +84,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           transition={{ duration: 0.3 }}
           className="w-full h-full"
         >
-          {/* Display actual image if it starts with data: (base64) or http, otherwise show placeholder */}
           {image && (image.startsWith('data:') || image.startsWith('http')) ? (
             <img
               src={image}
@@ -71,10 +105,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         >
           <span
             className={`px-3 py-1 rounded-full text-xs font-bold text-white ${
-              inStock ? 'bg-green-500' : 'bg-gray-400'
+              isInStock ? 'bg-green-500' : 'bg-gray-400'
             }`}
           >
-            {inStock ? 'In Stock' : 'Out of Stock'}
+            {isInStock ? `${currentQuantity} in Stock` : 'Out of Stock'}
           </span>
         </motion.div>
       </div>
@@ -99,20 +133,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Add to Cart Button */}
         <motion.button
-          whileHover={inStock ? { scale: 1.05 } : {}}
-          whileTap={inStock ? { scale: 0.95 } : {}}
+          whileHover={isInStock && !isLoading ? { scale: 1.05 } : {}}
+          whileTap={isInStock && !isLoading ? { scale: 0.95 } : {}}
           onClick={handleAddToCart}
-          disabled={!inStock}
+          disabled={!isInStock || isLoading}
           className={`w-full py-3 px-4 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${
             isAdded
               ? 'bg-green-500 text-white'
-              : inStock
+              : isInStock && !isLoading
               ? 'text-white hover:opacity-90'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
-          style={inStock && !isAdded ? { backgroundColor: '#0091AD' } : undefined}
+          style={isInStock && !isAdded && !isLoading ? { backgroundColor: '#0091AD' } : undefined}
         >
-          {isAdded ? (
+          {isLoading ? (
+            'Adding...'
+          ) : isAdded ? (
             <>
               <Check size={20} />
               Added!
@@ -120,7 +156,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           ) : (
             <>
               <ShoppingCart size={20} />
-              {inStock ? 'Add to Cart' : 'Out of Stock'}
+              {isInStock ? 'Add to Cart' : 'Out of Stock'}
             </>
           )}
         </motion.button>

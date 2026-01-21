@@ -1,6 +1,6 @@
 "use client";
 
-import ProductsDashboard from '@/components/admin/products/ProductsDashboard';
+import { ProductsDashboard } from '@/components/admin/products/ProductsDashboard';
 
 export default function Page() {
   return (

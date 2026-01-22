@@ -2,10 +2,6 @@
 
 import ClientsDashboard from '@/components/admin/clients/ClientsDashboard';
 
-export default function Page() {
-  return (
-    <div className="max-w-7xl mx-auto">
-      <ClientsDashboard />
-    </div>
-  );
+export default function ClientsPage() {
+  return <ClientsDashboard />;
 }

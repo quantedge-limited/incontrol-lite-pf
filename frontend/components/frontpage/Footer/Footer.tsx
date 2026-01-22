@@ -3,6 +3,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Phone, MapPin } from 'lucide-react';
+import Link from 'next/link';
+import { Instagram, Facebook, MessageCircle, Music2 } from 'lucide-react'; // TikTok often uses Music2 or a custom SVG
+
+
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -27,52 +31,90 @@ export const Footer: React.FC = () => {
           {/* Quick Links */}
           <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.3 }}>
             <h4 className="text-lg font-bold mb-4" style={{ color: '#0091AD' }}>Quick Links</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li>
-                <a href="/" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
-                  Home
-                </a>
-              </li>
-              <li>
-                <a href="/#products" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
-                  Products
-                </a>
-              </li>
-              <li>
-                <a href="/about" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
-                  About Us
-                </a>
-              </li>
-              <li>
-                <a href="/contact" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
-                  Contact
-                </a>
-              </li>
-            </ul>
+                <ul className="space-y-2 text-sm text-gray-400">
+  <li>
+    <Link href="/" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
+      Home
+    </Link>
+  </li>
+  <li>
+    <Link href="/#products" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
+      Products
+    </Link>
+  </li>
+  <li>
+    <Link href="/about" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
+      About Us
+    </Link>
+  </li>
+  <li>
+    <Link href="/contact" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
+      Contact
+    </Link>
+  </li>
+</ul>
+
+
           </motion.div>
 
-          {/* Support */}
-          <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.3 }}>
-            <h4 className="text-lg font-bold mb-4" style={{ color: '#0091AD' }}>Support</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li>
-                <a href="#" className="transition-colors" style={{ color: '#999' }} onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} onMouseLeave={(e) => e.currentTarget.style.color = '#999'}>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="transition-colors" style={{ color: '#a0a0a0' }} onMouseEnter={(e) => e.currentTarget.style.color = '#71A9F7'} onMouseLeave={(e) => e.currentTarget.style.color = '#a0a0a0'}>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="transition-colors" style={{ color: '#a0a0a0' }} onMouseEnter={(e) => e.currentTarget.style.color = '#71A9F7'} onMouseLeave={(e) => e.currentTarget.style.color = '#a0a0a0'}>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="transition-colors" style={{ color: '#a0a0a0' }} onMouseEnter={(e) => e.currentTarget.style.color = '#71A9F7'} onMouseLeave={(e) => e.currentTarget.style.color = '#a0a0a0'}>
-                </a>
-              </li>
-            </ul>
-          </motion.div>
+          {/* Social Media */}
+            <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.3 }}>
+  <h4 className="text-lg font-bold mb-4" style={{ color: '#0091AD' }}>Social media</h4>
+  <ul className="flex space-x-4 text-sm text-gray-400">
+    {/* WhatsApp */}
+    <li>
+      <Link 
+        href="https://wa.me/yournumber" 
+        target="_blank"
+        className="transition-colors" 
+        style={{ color: '#999' }} 
+        onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} 
+        onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
+      >
+        <MessageCircle size={24} />
+      </Link>
+    </li>
+    {/* Instagram */}
+    <li>
+      <Link 
+        href="https://instagram.com/yourprofile" 
+        target="_blank"
+        className="transition-colors" 
+        style={{ color: '#999' }} 
+        onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} 
+        onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
+      >
+        <Instagram size={24} />
+      </Link>
+    </li>
+    {/* Facebook */}
+    <li>
+      <Link 
+        href="https://facebook.com/yourpage" 
+        target="_blank"
+        className="transition-colors" 
+        style={{ color: '#999' }} 
+        onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} 
+        onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
+      >
+        <Facebook size={24} />
+      </Link>
+    </li>
+    {/* TikTok */}
+    <li>
+      <Link 
+        href="https://tiktok.com/@yourhandle" 
+        target="_blank"
+        className="transition-colors" 
+        style={{ color: '#999' }} 
+        onMouseEnter={(e) => e.currentTarget.style.color = '#0091AD'} 
+        onMouseLeave={(e) => e.currentTarget.style.color = '#999'}
+      >
+        <Music2 size={24} />
+      </Link>
+    </li>
+  </ul>
+</motion.div>
 
           {/* Contact */}
           <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.3 }}>

@@ -1,116 +1,80 @@
+// components/frontpage/Header/Header.tsx
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { ShoppingCart, Menu, X } from 'lucide-react';
+import { Menu, X, ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import Link from 'next/link';
+
 
 interface HeaderProps {
   onCartClick: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
-  const { totalItems } = useCart();
+  const { items } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // Calculate total items from cart
+  const totalItems = items.reduce((total, item) => total + item.quantity, 0);
 
   return (
-    <motion.header
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="sticky top-0 z-50 bg-white shadow-sm" style={{ borderBottom: '1px solid #d9f0f7' }}
-    >
+    <header className="sticky top-0 z-30 w-full bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0091AD 0%, #006b84 100%)' }}>
-              <span className="text-white font-bold text-lg">ME</span>
-            </div>
-            <div>
-              <h1 className="text-xl font-bold bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, #0091AD 0%, #00b8d4 100%)', WebkitBackgroundClip: 'text', color: 'transparent' }}>Mams Entreprise</h1>
-              <p className="text-xs font-medium" style={{ color: '#0091AD' }}>DCI Juja - Premium Products</p>
-            </div>
-          </motion.div>
+          <div className="flex items-center">
+            <h1 className="text-2xl font-bold" style={{ color: '#0091AD' }}>
+              Mams Entreprise
+            </h1>
+          </div>
 
-          {/* Navigation - Desktop */}
-          <nav className="hidden md:flex gap-8 items-center">
-            <motion.a
-              whileHover={{ color: '#457B9D' }}
-              href="/"
-              className="text-gray-600 font-medium transition-colors"
-            >
-              Products
-            </motion.a>
-            <motion.a
-              whileHover={{ color: '#457B9D' }}
-              href="/about"
-              className="text-gray-600 font-medium transition-colors"
-            >
-              About
-            </motion.a>
-            <motion.a
-              whileHover={{ color: '#457B9D' }}
-              href="/contact"
-              className="text-gray-600 font-medium transition-colors"
-            >
-              Contact
-            </motion.a>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <a href="#" className="text-gray-700 hover:text-[#0091AD] font-medium">Home</a>
+            <a href="#products" className="text-gray-700 hover:text-[#0091AD] font-medium">Products</a>
+            <a href="#" className="text-gray-700 hover:text-[#0091AD] font-medium">About</a>
+            <a href="#" className="text-gray-700 hover:text-[#0091AD] font-medium">Contact</a>
           </nav>
 
-          {/* Cart Icon */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onCartClick}
-            className="relative p-2 rounded-lg transition-colors" onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f7ff'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <ShoppingCart size={24} color="#457B9D" />
-            {totalItems > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center"
-              >
-                {totalItems}
-              </motion.span>
-            )}
-          </motion.button>
+          {/* Cart Button */}
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={onCartClick}
+              className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Shopping cart"
+            >
+              <ShoppingCart size={24} className="text-gray-700" />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {totalItems > 9 ? '9+' : totalItems}
+                </span>
+              )}
+            </button>
 
-          {/* Mobile Menu Button */}
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="md:hidden p-2 rounded-lg transition-colors" onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f7ff'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            {isMenuOpen ? <X size={24} color="#457B9D" /> : <Menu size={24} color="#457B9D" />}
-          </motion.button>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg"
+              aria-label="Toggle menu"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Navigation */}
         {isMenuOpen && (
-          <motion.nav
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="md:hidden pb-4 flex flex-col gap-4"
-          >
-            <a href="/" className="font-medium transition-colors" style={{ color: '#0091AD' }} onClick={() => setIsMenuOpen(false)}>
-              Products
-            </a>
-            <a href="/about" className="font-medium transition-colors" style={{ color: '#0091AD' }} onClick={() => setIsMenuOpen(false)}>
-              About
-            </a>
-            <a href="/contact" className="font-medium transition-colors" style={{ color: '#0091AD' }} onClick={() => setIsMenuOpen(false)}>
-              Contact
-            </a>
-          </motion.nav>
+          <div className="md:hidden border-t border-gray-200 py-4">
+            <div className="flex flex-col space-y-3">
+              <a href="#" className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2">Home</a>
+              <a href="#products" className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2">Products</a>
+              <a href="#" className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2">About</a>
+              <a href="#" className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2">Contact</a>
+            </div>
+          </div>
         )}
       </div>
-    </motion.header>
+    </header>
   );
 };

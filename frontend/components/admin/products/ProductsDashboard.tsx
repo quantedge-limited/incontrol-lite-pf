@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Plus, Trash2, Edit2, X, Package, TrendingUp, DollarSign } from 'lucide-react';
 import Image from 'next/image';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+
 
 import ProductForm from './ProductForm';
 import { Product } from './types';
@@ -188,7 +188,7 @@ export const ProductsDashboard: React.FC = () => {
           {!isAddingProduct && (
             <button
               onClick={() => setIsAddingProduct(true)}
-              className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+              className="px-6 py-3 bg-linear-to-r from-emerald-600 to-emerald-700 text-white font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
             >
               <Plus className="h-5 w-5" />
               Add New Product
@@ -269,6 +269,7 @@ export const ProductsDashboard: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         {product.images && product.images.length > 0 ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={product.images[0]}
                             alt={product.name}

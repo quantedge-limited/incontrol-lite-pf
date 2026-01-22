@@ -34,7 +34,6 @@ export default function AdminAuthPage() {
     }
 
     setLoading(true);
-
     try {
       const response = await fetch(`${API_BASE}/staff/request-otp/`, {
         method: 'POST',
@@ -71,7 +70,6 @@ export default function AdminAuthPage() {
     }
 
     setLoading(true);
-
     try {
       const response = await fetch(`${API_BASE}/staff/verify-otp/`, {
         method: 'POST',
@@ -174,10 +172,7 @@ export default function AdminAuthPage() {
 
             
           </form>
-        )}
-
-        {/* STEP 2: OTP VERIFICATION */}
-        {step === 2 && (
+        ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-5">
             <div className="text-center">
               <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">

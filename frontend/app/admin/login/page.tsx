@@ -4,119 +4,175 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
-
+import 'react-toastify/dist/ReactToastify.css';
 
 /**
  * AdminAuthPage Component
- * Updated Flow:
- * 1. Email collection -> Sends OTP
- * 2. OTP Verification & Persistence
+ * Connected to Django backend OTP authentication
  */
 export default function AdminAuthPage() {
   const router = useRouter();
   
+  // API base URL
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+  
   // --- UI & FLOW STATE ---
-  // 1 = Email Input, 2 = OTP Input
-  const [step, setStep] = useState<1 | 2>(1); 
+  const [step, setStep] = useState<1 | 2>(1); // 1 = Email Input, 2 = OTP Input
   const [loading, setLoading] = useState<boolean>(false); 
-
-  // --- FORM DATA STATE ---
   const [email, setEmail] = useState<string>('');
   const [otp, setOtp] = useState<string>('');
 
   /**
-   * Step 1: Request OTP
-   * Sends email to backend to trigger the OTP process.
+   * Step 1: Request OTP from backend
    */
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!email.trim()) {
+      toast.error("Please enter your email");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Logic: Simulate API call to send OTP
-      console.log("Requesting OTP for:", email);
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulating network delay
-      
-      toast.success(`OTP sent to ${email}`);
-      setStep(2);
+      const response = await fetch(`${API_BASE}/staff/request-otp/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        toast.success(`OTP sent to ${email}`);
+        setStep(2);
+      } else {
+        const errorData = await response.json();
+        toast.error(errorData.detail || "Failed to send OTP");
+      }
     } catch (err) {
-      toast.error("Failed to send OTP. Please try again.");
+      console.error('OTP request error:', err);
+      toast.error("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Step 2: OTP Verification Handler
+   * Step 2: Verify OTP with backend
    */
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!otp.trim() || otp.length !== 6) {
+      toast.error("Please enter a valid 6-digit OTP");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // MOCK VALIDATION: Using '123456' as the static test code
-      if (otp === '123456') {
-        const mockResponse = {
-          accessToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...", 
-          refreshToken: "def456-refresh-token-xyz",
-          userEmail: email
-        };
+      const response = await fetch(`${API_BASE}/staff/verify-otp/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email, 
+          otp 
+        }),
+      });
 
-        // Persistence
-        localStorage.setItem('access_token', mockResponse.accessToken);
-        localStorage.setItem('refresh_token', mockResponse.refreshToken);
-        localStorage.setItem('admin_email', mockResponse.userEmail);
+      const data = await response.json();
+
+      if (response.ok) {
+        // Save tokens and admin data
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+        localStorage.setItem('admin_email', email);
+        
+        // Save admin info if available
+        if (data.admin) {
+          localStorage.setItem('admin_info', JSON.stringify(data.admin));
+        }
 
         toast.success("Login successful! Redirecting...");
 
-        // Small delay so user sees the success toast
+        // Redirect after short delay
         setTimeout(() => {
           router.push('/admin/dashboard/overview');
-        }, 1500);
+        }, 1000);
       } else {
-        toast.error("Invalid OTP code. Try 123456.");
+        toast.error(data.detail || "Invalid OTP");
       }
     } catch (err) {
-      toast.error("An error occurred during verification.");
+      console.error('OTP verification error:', err);
+      toast.error("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-      {/* Toast Container for notifications */}
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 to-gray-50 p-4">
+      <ToastContainer 
+        position="top-right" 
+        autoClose={3000} 
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-        
         {/* STEP 1: EMAIL INPUT */}
         {step === 1 && (
           <form onSubmit={handleRequestOtp} className="space-y-5">
             <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
               <h2 className="text-2xl font-bold text-gray-800">Admin Portal</h2>
               <p className="text-sm text-gray-500 mt-1">Enter your email to receive a login code</p>
             </div>
             
             <div>
-              <label className="text-sm font-medium text-gray-700">Email Address</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
               <input 
                 type="email" 
                 required
-                className="w-full mt-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@example.com"
+                disabled={loading}
               />
             </div>
 
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-blue-300"
+              className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-all disabled:bg-emerald-300 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {loading ? 'Sending Code...' : 'Get OTP'}
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Sending Code...
+                </>
+              ) : 'Get OTP'}
             </button>
+
+            
           </form>
         )}
 
@@ -124,42 +180,94 @@ export default function AdminAuthPage() {
         {step === 2 && (
           <form onSubmit={handleVerifyOtp} className="space-y-5">
             <div className="text-center">
+              <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               <h2 className="text-2xl font-bold text-gray-800">Verify Identity</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Enter the code sent to <br/>
+                Enter the code sent to 
+                <br />
                 <span className="font-semibold text-gray-700">{email}</span>
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                (For testing, check server console for OTP)
               </p>
             </div>
             
             <div>
               <input 
                 type="text" 
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="000000"
                 required
                 maxLength={6}
-                className="w-full p-4 text-center text-3xl tracking-[0.5em] font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                className="w-full p-4 text-center text-3xl tracking-[0.5em] font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                disabled={loading}
               />
             </div>
 
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition disabled:bg-green-300"
+              className="w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-all disabled:bg-emerald-300 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              {loading ? 'Verifying...' : 'Verify & Login'}
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Verifying...
+                </>
+              ) : 'Verify & Login'}
             </button>
             
-            <button 
-              type="button" 
-              onClick={() => setStep(1)} 
-              className="w-full text-sm text-gray-500 hover:text-gray-800 underline underline-offset-4"
-            >
-              Change Email
-            </button>
+            <div className="flex justify-between">
+              <button 
+                type="button" 
+                onClick={() => setStep(1)} 
+                className="text-sm text-gray-500 hover:text-gray-800 transition"
+                disabled={loading}
+              >
+                ← Change Email
+              </button>
+              
+              <button 
+                type="button" 
+                onClick={() => {
+                  setEmail('');
+                  setOtp('');
+                  setStep(1);
+                }} 
+                className="text-sm text-gray-500 hover:text-gray-800 transition"
+                disabled={loading}
+              >
+                Clear & Start Over
+              </button>
+            </div>
+
+            {/* Development mode hint */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+                <p className="font-medium mb-1">Development Hint:</p>
+                <p>Check Django console for generated OTP after requesting.</p>
+                <p>Or use the mock login button above.</p>
+              </div>
+            )}
           </form>
         )}
+
+        {/* Footer */}
+        <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+          <p className="text-xs text-gray-500">
+            Secure login powered by Django REST Framework
+          </p>
+        </div>
       </div>
     </div>
   );

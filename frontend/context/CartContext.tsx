@@ -8,7 +8,7 @@ export interface CartItem {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image_path: string | null;
   quantity: number;
   productId: number; // Always a number
 }

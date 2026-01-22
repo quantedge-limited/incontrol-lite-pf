@@ -20,7 +20,6 @@ export const Contact: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would send the form data to your backend
     console.log('Form submitted:', formData);
     setSubmitted(true);
     setTimeout(() => {
@@ -44,7 +43,7 @@ export const Contact: React.FC = () => {
             Get In <span style={{ color: '#0091AD' }}>Touch</span>
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            Have questions? We&apos;d love to hear from you. Send us a message and we&apos;ll respond as soon as possible.
           </p>
         </motion.div>
 
@@ -67,9 +66,7 @@ export const Contact: React.FC = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none text-gray-900"
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#0091AD'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0091AD] transition-colors"
                   placeholder="John Doe"
                 />
               </div>
@@ -84,9 +81,7 @@ export const Contact: React.FC = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none text-gray-900"
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#0091AD'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0091AD] transition-colors"
                   placeholder="john@example.com"
                 />
               </div>
@@ -101,9 +96,7 @@ export const Contact: React.FC = () => {
                   value={formData.subject}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none text-gray-900"
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#0091AD'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0091AD] transition-colors"
                   placeholder="How can we help?"
                 />
               </div>
@@ -118,9 +111,7 @@ export const Contact: React.FC = () => {
                   onChange={handleChange}
                   required
                   rows={5}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none text-gray-900 resize-none"
-                  onFocus={(e) => e.currentTarget.style.borderColor = '#0091AD'}
-                  onBlur={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#0091AD] transition-colors resize-none"
                   placeholder="Your message here..."
                 />
               </div>
@@ -129,8 +120,8 @@ export const Contact: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
-                className="w-full py-3 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 hover:opacity-90"
-                style={{ backgroundColor: '#0091AD' }}
+                className="w-full py-3 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(to right, #0091AD, #00b8d4)' }}
               >
                 {submitted ? (
                   <>
@@ -157,7 +148,7 @@ export const Contact: React.FC = () => {
             {/* Contact Details */}
             <div className="space-y-6">
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#e6f7fb' }}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#e6f7fb' }}>
                   <MapPin size={24} style={{ color: '#0091AD' }} />
                 </div>
                 <div>
@@ -168,32 +159,32 @@ export const Contact: React.FC = () => {
               </div>
 
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#e6f7fb' }}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#e6f7fb' }}>
                   <Phone size={24} style={{ color: '#0091AD' }} />
                 </div>
                 <div>
                   <h4 className="font-bold text-gray-900 mb-1">Phone</h4>
-                  <p className="text-gray-600">+254 (0) 700 000 000</p>
+                  <p className="text-gray-600">+254 719 338 583</p>
                   <p className="text-gray-500 text-sm">Mon-Fri, 9am-6pm EAT</p>
                 </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#e6f7fb' }}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: '#e6f7fb' }}>
                   <Mail size={24} style={{ color: '#0091AD' }} />
                 </div>
                 <div>
                   <h4 className="font-bold text-gray-900 mb-1">Email</h4>
                   <p className="text-gray-600">hello@mamsenterprise.com</p>
-                  <p className="text-gray-500 text-sm">We'll respond within 24 hours</p>
+                  <p className="text-gray-500 text-sm">We&apos;ll respond within 24 hours</p>
                 </div>
               </div>
             </div>
 
-            {/* Google Maps Embed */}
+            {/* Google Maps Embed for DCI Juja */}
             <div className="rounded-xl overflow-hidden shadow-lg h-80">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7610175098146!2d37.0191!3d-0.9487!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182f1f1f1f1f1f1f%3A0x0!2sDCI%20Juja!5e0!3m2!1sen!2ske!4v1234567890"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.0436402361664!2d37.0097627!3d-1.1068953!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x182f46b233603579%3A0x3334e8a884ac04b0!2sDCI%20Juja!5e0!3m2!1sen!2ske!4v1705500000000!5m2!1sen!2ske"
                 width="100%"
                 height="100%"
                 style={{ border: 0 }}

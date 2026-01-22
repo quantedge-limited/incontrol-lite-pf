@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import Image from 'next/image';
-
+import { motion } from 'framer-motion';
 
 interface HeroProps {
   onShopClick: () => void;
@@ -74,7 +73,7 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
               className="flex flex-col sm:flex-row gap-4"
             >
               <motion.button
-                whileHover={{ scale: 1.05, boxShadow: '0 10px 25px rgba(69, 123, 157, 0.3)' }}
+                whileHover={{ scale: 1.05, boxShadow: '0 10px 25px rgba(0, 145, 173, 0.3)' }}
                 whileTap={{ scale: 0.95 }}
                 onClick={onShopClick}
                 className="px-8 py-4 text-white font-bold rounded-lg shadow-lg transition-all" style={{ backgroundColor: '#0091AD' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
@@ -111,25 +110,24 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
 
           {/* Right Side - Illustration */}
           <motion.div
-  variants={itemVariants}
-  className="hidden md:block relative h-full"
->
-  <motion.div
-    animate={{ y: [0, -30, 0] }}
-    transition={{ duration: 4, repeat: Infinity }}
-    className="relative"
-  >
-    {/* The Image replacing the gradient div */}
-    <Image 
-      src="/hero1.png" 
-      alt="Description" 
-      className="w-full h-80 object-cover rounded-3xl shadow-2xl"
-    />
-    
-    {/* Optional: Keeps the slight dark overlay from your original code */}
-    <div className="absolute inset-0 bg-linear-to-t from-gray-900/20 to-transparent rounded-3xl pointer-events-none" />
-  </motion.div>
-</motion.div>
+            variants={itemVariants}
+            className="hidden md:block relative h-full"
+          >
+            <motion.div
+              animate={{ y: [0, -30, 0] }}
+              transition={{ duration: 4, repeat: Infinity }}
+              className="relative"
+            >
+              <Image
+                src="/hero1.png" 
+                alt="Description" 
+                width={500}
+                height={320}
+                className="w-full h-80 object-cover rounded-3xl shadow-2xl"
+              />
+              <div className="absolute inset-0 bg-linear-to-t from-gray-900/20 to-transparent rounded-3xl pointer-events-none" />
+            </motion.div>
+          </motion.div>
         </motion.div>
       </div>
 
@@ -139,15 +137,15 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
         transition={{ duration: 2, repeat: Infinity }}
         className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
       >
-        <p className="text-gray-600 text-sm mb-2">Scroll to explore</p>
+        <p className="text-gray-600 text-sm mb-2 text-center">Scroll to explore</p>
         <svg
-          className="w-6 h-6 mx-auto text-gray-400"
+          className="w-6 h-6 mx-auto"
           fill="none"
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
           viewBox="0 0 24 24"
-          stroke="currentColor"
+          stroke="#0091AD"
         >
           <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
         </svg>

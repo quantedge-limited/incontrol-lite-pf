@@ -1,12 +1,44 @@
-export type Product = {
+export interface Product {
   id: string;
   name: string;
-  brand?: string;
-  supplier?: string;
+  brand_id?: string;
+  brand_name?: string;
+  supplier_id?: string;
+  supplier_name?: string;
   quantity: number;
   price: number;
   description?: string;
-  dateAdded: string; // ISO
-};
+  images: string[];
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+}
 
-export const STORAGE_KEY = 'incontrol_products_v1';
+export interface ProductFormData {
+  name: string;
+  brand_id?: string;
+  supplier_id?: string;
+  quantity: number;
+  price: number;
+  description?: string;
+  images: string[];
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  email?: string;
+  phone_number?: string;
+  address?: string;
+  additional_info?: any;
+  created_at: string;
+  updated_at: string;
+}

@@ -1,59 +1,191 @@
 "use client";
 
 import { useState } from 'react';
-import { Supplier } from './types';
+import { Supplier, SupplierFormData } from './types';
+import { supplierApi } from '@/lib/api/supplierApi';
 
-export default function SupplierForm({ onSave }: { onSave: (s: Supplier) => void }) {
-  const [name, setName] = useState('');
-  const [contact, setContact] = useState('');
-  const [email, setEmail] = useState('');
-  const [address, setAddress] = useState('');
-  const [supplies, setSupplies] = useState('');
+interface SupplierFormProps {
+  onSave: () => void;
+  editSupplier?: Supplier | null;
+  onCancel?: () => void;
+}
 
-  function submit(e: React.FormEvent) {
+export default function SupplierForm({ onSave, editSupplier, onCancel }: SupplierFormProps) {
+  // Extract supplies from additional_info if it exists
+  const initialAdditionalInfo = editSupplier?.additional_info;
+  const initialSupplies = initialAdditionalInfo?.supplies || 
+                        (typeof initialAdditionalInfo === 'string' ? initialAdditionalInfo : '');
+
+  const [formData, setFormData] = useState<SupplierFormData>({
+    name: editSupplier?.name || '',
+    email: editSupplier?.email || '',
+    phone_number: editSupplier?.phone_number || '',
+    address: editSupplier?.address || '',
+    additional_info: initialSupplies || '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supplier: Supplier = {
-      id: `sp-${Date.now()}`,
-      name: name || 'Unnamed Supplier',
-      contact: contact || undefined,
-      email: email || undefined,
-      address: address || undefined,
-      supplies: supplies || undefined,
-      dateAdded: new Date().toISOString(),
-    };
-    onSave(supplier);
-    setName('');
-    setContact('');
-    setEmail('');
-    setAddress('');
-    setSupplies('');
-  }
+    setLoading(true);
+    setError('');
+
+    try {
+      const apiData = {
+        name: formData.name,
+        email: formData.email || null,
+        phone_number: formData.phone_number || null,
+        address: formData.address || null,
+        additional_info: formData.additional_info ? { 
+          supplies: formData.additional_info 
+        } : null,
+      };
+
+      if (editSupplier) {
+        await supplierApi.update(editSupplier.id, apiData);
+      } else {
+        await supplierApi.create(apiData);
+      }
+      
+      onSave(); // Refresh the supplier list
+      
+      // Reset form if not editing
+      if (!editSupplier) {
+        setFormData({
+          name: '',
+          email: '',
+          phone_number: '',
+          address: '',
+          additional_info: '',
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div>
-        <label className="block text-sm text-emerald-700">Name</label>
-        <input required value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full border rounded px-2 py-1" />
-      </div>
-      <div>
-        <label className="block text-sm text-emerald-700">Contact</label>
-        <input value={contact} onChange={(e) => setContact(e.target.value)} className="mt-1 block w-full border rounded px-2 py-1" />
-      </div>
-      <div>
-        <label className="block text-sm text-emerald-700">Email</label>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full border rounded px-2 py-1" />
-      </div>
-      <div>
-        <label className="block text-sm text-emerald-700">Address</label>
-        <input value={address} onChange={(e) => setAddress(e.target.value)} className="mt-1 block w-full border rounded px-2 py-1" />
-      </div>
-      <div className="sm:col-span-2">
-        <label className="block text-sm text-emerald-700">Supplies (brief)</label>
-        <input value={supplies} onChange={(e) => setSupplies(e.target.value)} className="mt-1 block w-full border rounded px-2 py-1" />
-      </div>
-      <div className="sm:col-span-2 flex justify-end">
-        <button type="submit" className="px-4 py-2 bg-emerald-800 text-white rounded">Save Supplier</button>
-      </div>
-    </form>
+    <div className="bg-white p-6 rounded-lg shadow-lg border border-emerald-100">
+      <h2 className="text-xl font-bold text-emerald-800 mb-6">
+        {editSupplier ? 'Edit Supplier' : 'Add New Supplier'}
+      </h2>
+      
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded mb-6">
+          <div className="font-medium">Error</div>
+          <div className="text-sm">{error}</div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Supplier Name *
+            </label>
+            <input
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              placeholder="Enter supplier name"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              placeholder="supplier@example.com"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Phone Number
+            </label>
+            <input
+              name="phone_number"
+              value={formData.phone_number}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              placeholder="+254 700 000000"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Address
+            </label>
+            <input
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              placeholder="Physical address"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Supplies / Additional Info
+          </label>
+          <textarea
+            name="additional_info"
+            value={formData.additional_info}
+            onChange={handleChange}
+            rows={3}
+            className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            placeholder="List supplies provided or any additional information"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="submit"
+            className="px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </>
+            ) : editSupplier ? 'Update Supplier' : 'Add Supplier'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

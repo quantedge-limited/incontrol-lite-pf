@@ -1,3 +1,4 @@
+// app/page.tsx
 'use client';
 
 import { useState } from 'react';
@@ -7,6 +8,7 @@ import { ProductsList } from '@/components/frontpage/Product/ProductsList';
 import { CartSidebar } from '@/components/frontpage/Cart/CartSidebar';
 import { CheckoutModal } from '@/components/frontpage/Checkout/CheckoutModal';
 import { Footer } from '@/components/frontpage/Footer/Footer';
+import { CartProvider } from '@/context/CartContext'; // Import CartProvider
 
 export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -18,23 +20,25 @@ export default function Home() {
   };
 
   return (
-    <main className="bg-white">
-      <Header onCartClick={() => setIsCartOpen(true)} />
-      <Hero onShopClick={() => {
-        const productsSection = document.getElementById('products');
-        productsSection?.scrollIntoView({ behavior: 'smooth' });
-      }} />
-      <ProductsList />
-      <CartSidebar
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        onCheckout={handleCheckout}
-      />
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-      />
-      <Footer />
-    </main>
+    <CartProvider> {/* Wrap everything with CartProvider */}
+      <main className="bg-white">
+        <Header onCartClick={() => setIsCartOpen(true)} />
+        <Hero onShopClick={() => {
+          const productsSection = document.getElementById('products');
+          productsSection?.scrollIntoView({ behavior: 'smooth' });
+        }} />
+        <ProductsList />
+        <CartSidebar
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          onCheckout={handleCheckout}
+        />
+        <CheckoutModal
+          isOpen={isCheckoutOpen}
+          onClose={() => setIsCheckoutOpen(false)}
+        />
+        <Footer />
+      </main>
+    </CartProvider>
   );
 }

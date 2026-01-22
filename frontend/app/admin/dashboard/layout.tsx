@@ -66,7 +66,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         </nav>
 
         <div className="absolute bottom-0 w-full p-4 border-t border-white/10">
-          <Link href="/" className="flex items-center gap-3 text-red-400 hover:text-red-600 transition-colors px-3 py-2">
+          <Link href="/admin/login" className="flex items-center gap-3 text-red-400 hover:text-red-600 transition-colors px-3 py-2">
             <LogOut className="h-5 w-5" />
             <span className="text-sm font-medium">Logout</span>
           </Link>

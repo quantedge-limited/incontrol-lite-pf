@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
+
 
 interface HeroProps {
   onShopClick: () => void;
@@ -64,7 +66,7 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
               variants={itemVariants}
               className="text-lg text-gray-600 mb-8 leading-relaxed"
             >
-              Experience Mams Entreprise's carefully curated selection of household and personal care products. Premium quality at affordable prices, right here in DCI Juja, Kenya.
+              Experience Mams Enterprise&apos;s carefully curated selection of household and personal care products. Premium quality at affordable prices, right here in DCI Juja, Kenya.
             </motion.p>
 
             <motion.div
@@ -109,18 +111,25 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
 
           {/* Right Side - Illustration */}
           <motion.div
-            variants={itemVariants}
-            className="hidden md:block relative h-full"
-          >
-            <motion.div
-              animate={{ y: [0, -30, 0] }}
-              transition={{ duration: 4, repeat: Infinity }}
-              className="relative"
-            >
-              <div className="w-full h-80 rounded-3xl shadow-2xl" style={{ background: 'linear-gradient(135deg, #5fb3cc 0%, #0091AD 100%)' }} />
-              <div className="absolute inset-0 bg-gradient-to-t from-gray-900/20 to-transparent rounded-3xl" />
-            </motion.div>
-          </motion.div>
+  variants={itemVariants}
+  className="hidden md:block relative h-full"
+>
+  <motion.div
+    animate={{ y: [0, -30, 0] }}
+    transition={{ duration: 4, repeat: Infinity }}
+    className="relative"
+  >
+    {/* The Image replacing the gradient div */}
+    <Image 
+      src="/hero1.png" 
+      alt="Description" 
+      className="w-full h-80 object-cover rounded-3xl shadow-2xl"
+    />
+    
+    {/* Optional: Keeps the slight dark overlay from your original code */}
+    <div className="absolute inset-0 bg-linear-to-t from-gray-900/20 to-transparent rounded-3xl pointer-events-none" />
+  </motion.div>
+</motion.div>
         </motion.div>
       </div>
 

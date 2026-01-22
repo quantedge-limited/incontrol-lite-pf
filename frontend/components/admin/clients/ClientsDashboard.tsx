@@ -1,118 +1,149 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { Client, CLIENTS_KEY } from './types';
+import { useState, useEffect } from 'react';
 import ClientForm from './ClientForm';
-import ClientsTable from './ClientsTable';
-// 1. Added Toastify imports
-import { toast, ToastContainer } from 'react-toastify';
-
-function loadClients(): Client[] { 
-  try { 
-    const raw = localStorage.getItem(CLIENTS_KEY); 
-    return raw ? JSON.parse(raw) : []; 
-  } catch { 
-    return []; 
-  } 
-}
+import { Client } from './types';
+import { clientApi } from '@/lib/api/clientApi';
 
 export default function ClientsDashboard() {
-  const [clients, setClients] = useState<Client[]>(() => loadClients());
-  const [query, setQuery] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [selected, setSelected] = useState<Client | null>(null);
-  // State to toggle table visibility on small/medium screens
-  const [showMobileTable, setShowMobileTable] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
 
-  useEffect(() => { 
-    try { 
-      localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients)); 
-    } catch (err) {
-      console.error("Failed to save clients", err);
-    } 
-  }, [clients]);
-
-  function addClient(c: Client) { 
-    setClients(s => [c, ...s]); 
-  }
-
-  function deleteClient(id: string) { 
-    const confirmed = window.confirm("Are you sure you would love to delete the respective client?");
-    if (confirmed) {
-      setClients(s => s.filter(x => x.id !== id)); 
+  const fetchClients = async () => {
+    try {
+      const data = await clientApi.list();
+      setClients(data);
+    } catch (error) {
+      console.error('Failed to fetch clients:', error);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase(); 
-    if (!q) return clients;
-    return clients.filter(c => 
-      `${c.name} ${c.contact} ${c.email} ${c.notes}`.toLowerCase().includes(q)
-    );
-  }, [clients, query]);
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this client?')) {
+      try {
+        await clientApi.delete(id);
+        fetchClients(); // Refresh list
+      } catch (error) {
+        console.error('Failed to delete client:', error);
+        alert('Failed to delete client');
+      }
+    }
+  };
+
+  const handleEdit = (client: Client) => {
+    setEditingClient(client);
+    setShowForm(true);
+  };
+
+  const handleFormSuccess = () => {
+    fetchClients();
+    setShowForm(false);
+    setEditingClient(null);
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingClient(null);
+  };
+
+  if (loading) {
+    return <div className="text-center py-10">Loading clients...</div>;
+  }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 p-6 animate-in fade-in duration-500">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-emerald-100 pb-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-emerald-950">
-            Client Directory
-          </h1>
-          <p className="text-emerald-600 mt-1">
-            Manage client records for your loyal customers and bulk buyers plus their contact details.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-            {/* Toggle Button for mobile/tablet only */}
-            <button 
-              onClick={() => setShowMobileTable(!showMobileTable)}
-              className="xl:hidden px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm"
-            >
-              {showMobileTable ? 'Hide Client List' : 'View Client List'}
-            </button>
-            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
-                Total Clients: {clients.length}
-            </span>
-        </div>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-emerald-800">Clients</h1>
+        <button
+          onClick={() => setShowForm(true)}
+          className="px-4 py-2 bg-emerald-700 text-white rounded hover:bg-emerald-800"
+        >
+          + Add Client
+        </button>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+      {showForm && (
+        <ClientForm
+          onSave={handleFormSuccess}
+          editClient={editingClient}
+          onCancel={handleCancel}
+        />
+      )}
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-emerald-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                  Phone
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                  Address
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {clients.map((client) => (
+                <tr key={client.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-medium text-gray-900">
+                      {client.first_name} {client.last_name}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {client.email || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {client.phone_number || '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="max-w-xs truncate">
+                      {client.address || '-'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(client)}
+                      className="text-emerald-600 hover:text-emerald-900 mr-4"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(client.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         
-        {/* Sidebar: Form Container */}
-        <div className="xl:col-span-4">
-          <div className="bg-white border border-emerald-100 rounded-xl shadow-sm overflow-hidden">
-            <div className="bg-emerald-50/50 border-b border-emerald-100 px-5 py-4">
-              <h3 className="text-sm font-semibold text-emerald-900 uppercase tracking-wider">
-                Registration
-              </h3>
-            </div>
-            <div className="p-5">
-              <ClientForm onSave={addClient} />
-            </div>
+        {clients.length === 0 && !showForm && (
+          <div className="text-center py-10 text-gray-500">
+            No clients found. Click "Add Client" to get started.
           </div>
-        </div>
-
-        {/* Main: Table Container - Conditional visibility on sm/md based on showMobileTable */}
-        <div className={`xl:col-span-8 ${showMobileTable ? 'block' : 'hidden xl:block'}`}>
-          <div className="bg-white border border-emerald-100 shadow-sm overflow-hidden">
-            <div className="bg-emerald-50/50 border-b border-emerald-100 px-5 py-4 flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-emerald-900 uppercase tracking-wider">
-                Client List
-              </h3>
-            </div>
-            <div className="p-0 overflow-x-auto">
-              <ClientsTable 
-                clients={filtered} 
-                onView={(c) => setSelected(c)} 
-                onDelete={deleteClient} 
-                onSearch={setQuery} 
-              />
-            </div>
-          </div>
-        </div>
-
+        )}
       </div>
     </div>
   );

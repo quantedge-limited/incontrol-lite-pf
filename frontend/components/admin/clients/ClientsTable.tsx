@@ -1,42 +1,103 @@
 "use client";
 
-import { Client } from './types';
+import { Client, getClientFullName, formatDate } from './types';
 
-export default function ClientsTable({ clients, onView, onDelete, onSearch }:{ clients:Client[]; onView:(c:Client)=>void; onDelete:(id:string)=>void; onSearch:(q:string)=>void }){
+interface ClientsTableProps {
+  clients: Client[];
+  onView: (client: Client) => void;
+  onEdit: (client: Client) => void;
+  onDelete: (id: string) => void;
+  onSearch: (query: string) => void;
+}
+
+export default function ClientsTable({ 
+  clients, 
+  onView, 
+  onEdit, 
+  onDelete, 
+  onSearch 
+}: ClientsTableProps) {
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <input placeholder="Search clients..." onChange={(e)=>onSearch(e.target.value)} className="border rounded px-3 py-2 w-64" />
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="p-4 border-b">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-emerald-800">Clients</h2>
+          <input 
+            placeholder="Search clients..." 
+            onChange={(e) => onSearch(e.target.value)} 
+            className="border border-gray-300 rounded px-3 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
       </div>
 
-      <div className="bg-white border rounded shadow-sm overflow-hidden">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="text-left text-emerald-700">
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Contact</th>
-              <th className="px-3 py-2">Email</th>
-              <th className="px-3 py-2">Date Added</th>
-              <th className="px-3 py-2">Actions</th>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-emerald-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                Phone
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                Date Added
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {clients.map(c=> (
-              <tr key={c.id} className="hover:bg-gray-50">
-                <td className="px-3 py-3 text-emerald-900">{c.name}</td>
-                <td className="px-3 py-3 text-gray-600">{c.contact||'-'}</td>
-                <td className="px-3 py-3 text-emerald-700">{c.email||'-'}</td>
-                <td className="px-3 py-3 text-gray-500">{new Date(c.dateAdded).toLocaleDateString()}</td>
-                <td className="px-3 py-3">
-                  <div className="flex gap-2">
-                    <button onClick={()=>onView(c)} className="text-sm text-emerald-700">View</button>
-                    <button onClick={()=>onDelete(c.id)} className="text-sm text-red-600">Delete</button>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {clients.map((client) => (
+              <tr key={client.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="font-medium text-gray-900">
+                    {getClientFullName(client)}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {client.email || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {client.phone_number || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                  {formatDate(client.created_at)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => onView(client)}
+                      className="text-emerald-600 hover:text-emerald-900"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => onEdit(client)}
+                      className="text-blue-600 hover:text-blue-900"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(client.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>
             ))}
-            {clients.length===0 && (
-              <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-gray-500">No clients yet.</td></tr>
+            {clients.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  No clients found. Add your first client to get started.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

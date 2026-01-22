@@ -12,16 +12,17 @@ export default function SalesTable({ sales, onDelete }: { sales: Sale[]; onDelet
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <input placeholder="Search product or supplier..." value={q} onChange={(e)=>setQ(e.target.value)} className="border rounded px-3 py-2 w-64" />
+        <input placeholder="Search ..." value={q} onChange={(e)=>setQ(e.target.value)} className=" border-gray-300 rounded px-3 py-2 w-64" />
       </div>
 
-      <div className="bg-white border rounded shadow-sm overflow-x-auto">
+      <div className="bg-white rounded shadow-sm overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-left text-emerald-700">
               <th className="px-3 py-2">Date</th>
               <th className="px-3 py-2">Product</th>
-              <th className="px-3 py-2">Supplier</th>
+              <th className="px-3 py-2">Phone number</th>
+              <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Qty</th>
               <th className="px-3 py-2">Amount</th>
               <th className="px-3 py-2">Actions</th>

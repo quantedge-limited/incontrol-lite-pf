@@ -1,27 +1,17 @@
-/**
- * AdminDashboardLayout Component
- * * This is a wrapper for all routes under /admin/dashboard/*.
- * It provides:
- * 1. Route protection (client-side auth check).
- * 2. A responsive sidebar navigation.
- * 3. Session management (logout functionality).
- */
+'use client';
 
-// Client-side hooks for routing, path detection, and lifecycle management
-"use client";
-
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  Receipt, 
-  Package, 
-  Truck, 
-  Users, 
-  LogOut,
-  X 
+import {
+  LayoutDashboard,
+  Receipt,
+  Package,
+  Truck,
+  Users,
+  X,
+  LogOut
 } from 'lucide-react';
 
 export default function AdminDashboardLayout({ children }: { children: React.ReactNode }) {
@@ -90,15 +80,24 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     <div className="min-h-screen bg-gray-100 flex">
       {/* MOBILE OVERLAY: Dimmed background that closes sidebar when clicked */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div 
+          className="fixed inset-0 z-40 bg-transparent md:hidden" 
+          onClick={() => setSidebarOpen(false)} 
+        />
       )}
 
-      {/* SIDEBAR: Sticky on desktop, slide-out drawer on mobile */}
-      <motion.aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-green-900 text-white transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        {/* LOGO AREA */}
+      <motion.aside 
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-green-900 text-white transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="flex items-center justify-between h-16 bg-emerald-700 px-4">
           <span className="text-2xl font-bold tracking-tight">Admin</span>
-          <button onClick={() => setSidebarOpen(false)} className="md:hidden text-white">
+          {/* Close icon visible only on mobile */}
+          <button 
+            onClick={() => setSidebarOpen(false)} 
+            className="md:hidden text-white"
+          >
             <X size={24} />
           </button>
         </div>
@@ -114,12 +113,14 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
                 href={item.href} 
                 className={`group flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-lg transition-all ${
                   isActive 
-                    ? 'bg-white/10 text-emerald-400' 
-                    : 'text-white/80 hover:text-white hover:bg-white/5'
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-400' 
+                    : 'text-white hover:text-white'
                 }`} 
                 onClick={() => setSidebarOpen(false)}
               >
-                <Icon className={`h-5 w-5 ${isActive ? 'text-emerald-400' : 'text-white/80 group-hover:text-white'}`} />
+                <Icon className={`h-5 w-5 ${
+                  isActive ? 'text-emerald-400' : 'text-white group-hover:text-white'
+                }`} />
                 {item.name}
               </Link>
             );
@@ -128,9 +129,9 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
         {/* FOOTER ACTION: Logout trigger */}
         <div className="absolute bottom-0 w-full p-4 border-t border-white/10">
-          <button 
-            onClick={handleLogout}
-            className="flex w-full items-center gap-3 text-red-400 hover:text-red-300 transition-colors px-3 py-2"
+          <Link 
+            href="/admin/login" 
+            className="flex items-center gap-3 text-red-400 hover:text-red-600 transition-colors px-3 py-2"
           >
             <LogOut className="h-5 w-5" />
             <span className="text-sm font-medium">Logout</span>
@@ -143,7 +144,10 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
         {/* MOBILE TOPBAR: Visible only when screen size is small */}
         <header className="bg-white shadow md:hidden">
           <div className="flex items-center justify-between p-4">
-            <button onClick={() => setSidebarOpen(true)} className="text-gray-500">
+            <button 
+              onClick={() => setSidebarOpen(true)} 
+              className="text-gray-500 focus:outline-none focus:text-gray-700"
+            >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
@@ -153,7 +157,6 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
           </div>
         </header>
 
-        {/* PAGE INJECTION: Where individual dashboard pages (Overview, Sales, etc.) render */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 md:p-6">
           {children}
         </main>

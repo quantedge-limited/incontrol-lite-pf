@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -18,8 +18,6 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
   const pathname = usePathname();
   const router = useRouter();
   
-  // authorized: tracks if the user has a valid local token
-  // isSidebarOpen: controls the drawer visibility on mobile devices
   const [authorized, setAuthorized] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
@@ -33,7 +31,6 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     if (!token) {
       router.replace('/admin/login');
     } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthorized(true);
     }
   }, [router]);
@@ -47,6 +44,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('admin_email');
+    localStorage.removeItem('admin_info');
     router.replace('/admin/login');
   };
 
@@ -129,9 +127,9 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
 
         {/* FOOTER ACTION: Logout trigger */}
         <div className="absolute bottom-0 w-full p-4 border-t border-white/10">
-          <Link 
-            href="/admin/login" 
-            className="flex items-center gap-3 text-red-400 hover:text-red-600 transition-colors px-3 py-2"
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 text-red-400 hover:text-red-600 transition-colors px-3 py-2 w-full"
           >
             <LogOut className="h-5 w-5" />
             <span className="text-sm font-medium">Logout</span>

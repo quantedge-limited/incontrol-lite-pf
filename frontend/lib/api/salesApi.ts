@@ -62,76 +62,156 @@ export interface Sale {
   updated_at: string;
 }
 
+// New: Cart API types
+export interface CartItem {
+  id: string;
+  inventory_id: number;
+  inventory_name: string;
+  quantity: number;
+  price_per_unit: number;
+  total_price: number;
+}
+
+export interface Cart {
+  id: string;
+  session_id: string;
+  items: CartItem[];
+  total_price: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CheckoutDto {
+  buyer_name: string;
+  buyer_email: string;
+  buyer_phone: string;
+  buyer_address: string;
+  sale_type: 'online';
+  notes?: string;
+}
+
+// New: Create sale DTO
+export interface CreateSaleDto {
+  client?: string;
+  buyer_name?: string;
+  buyer_email?: string;
+  buyer_phone?: string;
+  buyer_address?: string;
+  sale_type: 'online' | 'walkin';
+  total_amount: number;
+  notes?: string;
+  items: Array<{
+    inventory: string;
+    quantity: number;
+    price_per_unit: number;
+  }>;
+}
+
+// Helper function for API requests
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  requireAuth: boolean = true
+): Promise<T> {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (requireAuth) {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+    credentials: 'include', // Important for session cookies
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Network error' }));
+    throw new Error(error.detail || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export const salesApi = {
   // Get sales statistics for dashboard
   async getStats(): Promise<SalesStats> {
-    const res = await fetch(`${API_BASE}/sales/stats/`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    });
-    if (!res.ok) throw new Error('Failed to fetch sales stats');
-    return await res.json();
+    return apiRequest<SalesStats>('/sales/stats/');
   },
 
   // Get chart data
   async getChartData(): Promise<ChartData> {
-    const res = await fetch(`${API_BASE}/sales/chart-data/`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    });
-    if (!res.ok) throw new Error('Failed to fetch chart data');
-    return await res.json();
+    return apiRequest<ChartData>('/sales/chart-data/');
   },
 
   // List all sales
   async list(): Promise<Sale[]> {
-    const res = await fetch(`${API_BASE}/sales/`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    });
-    if (!res.ok) throw new Error('Failed to fetch sales');
-    return await res.json();
+    return apiRequest<Sale[]>('/sales/');
   },
 
-  // Create a sale
-  async create(saleData: any): Promise<Sale> {
-    const res = await fetch(`${API_BASE}/sales/create/`, {
+  // Create a sale (for walk-in sales)
+  async create(saleData: CreateSaleDto): Promise<Sale> {
+    return apiRequest<Sale>('/sales/create/', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
       body: JSON.stringify(saleData),
     });
-    if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.detail || 'Failed to create sale');
-    }
-    return await res.json();
   },
 
   // Get single sale
   async get(id: string): Promise<Sale> {
-    const res = await fetch(`${API_BASE}/sales/${id}/`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    });
-    if (!res.ok) throw new Error('Failed to fetch sale');
-    return await res.json();
+    return apiRequest<Sale>(`/sales/${id}/`);
   },
 
   // Delete sale
   async delete(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/sales/${id}/delete/`, {
+    return apiRequest<void>(`/sales/${id}/delete/`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
     });
-    if (!res.ok) throw new Error('Failed to delete sale');
+  },
+
+  // Cart API (no auth required for guest carts)
+  async getCart(): Promise<Cart> {
+    return apiRequest<Cart>('/sales/cart/', {
+      method: 'GET',
+    }, false);
+  },
+
+  async addToCart(inventoryId: number, quantity: number = 1): Promise<CartItem> {
+    return apiRequest<CartItem>('/sales/cart/', {
+      method: 'POST',
+      body: JSON.stringify({ inventory_id: inventoryId, quantity }),
+    }, false);
+  },
+
+  async updateCartItem(itemId: string, quantity: number): Promise<CartItem> {
+    return apiRequest<CartItem>(`/sales/cart/items/${itemId}/`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantity }),
+    }, false);
+  },
+
+  async removeCartItem(itemId: string): Promise<void> {
+    return apiRequest<void>(`/sales/cart/items/${itemId}/`, {
+      method: 'DELETE',
+    }, false);
+  },
+
+  async clearCart(): Promise<void> {
+    return apiRequest<void>('/sales/cart/', {
+      method: 'DELETE',
+    }, false);
+  },
+
+  async checkout(checkoutData: CheckoutDto): Promise<Sale> {
+    return apiRequest<Sale>('/sales/checkout/', {
+      method: 'POST',
+      body: JSON.stringify(checkoutData),
+    }, false);
   },
 };

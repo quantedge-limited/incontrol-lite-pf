@@ -1,59 +1,89 @@
 "use client";
 
-import { Sale } from './types';
-import { useState } from 'react';
+import { Sale } from "@/lib/api/salesApi";
 
-export default function SalesTable({ sales, onDelete }: { sales: Sale[]; onDelete?: (id: string) => void }) {
-  const [q, setQ] = useState('');
-  const total = sales.reduce((s, x) => s + x.amount, 0);
+interface SalesTableProps {
+  sales: Sale[];
+}
 
-  const filtered = sales.filter((s) => (`${s.productName} ${s.supplier || ''}`).toLowerCase().includes(q.toLowerCase()));
+export default function SalesTable({ sales }: SalesTableProps) {
+  if (sales.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No sales records found
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <input placeholder="Search ..." value={q} onChange={(e)=>setQ(e.target.value)} className=" border-gray-300 rounded px-3 py-2 w-64" />
-      </div>
-
-      <div className="bg-white rounded shadow-sm overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="text-left text-emerald-700">
-              <th className="px-3 py-2">Date</th>
-              <th className="px-3 py-2">Product</th>
-              <th className="px-3 py-2">Phone number</th>
-              <th className="px-3 py-2">Qty</th>
-              <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">Actions</th>
+    <div className="overflow-x-auto">
+      <table className="w-full">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              Date
+            </th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              Customer
+            </th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              Type
+            </th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              Items
+            </th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+              Total
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {sales.map((sale) => (
+            <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm font-medium text-gray-900">
+                  {new Date(sale.created_at).toLocaleDateString()}
+                </div>
+                <div className="text-[10px] text-gray-500">
+                  {new Date(sale.created_at).toLocaleTimeString([], { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <div className="text-sm text-gray-900">
+                  {sale.buyer_name || (sale.client ? sale.client.name : "Guest")}
+                </div>
+                {sale.buyer_phone && (
+                  <div className="text-[10px] text-gray-500">
+                    {sale.buyer_phone}
+                  </div>
+                )}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${
+                  sale.sale_type === 'online' 
+                    ? 'bg-blue-100 text-blue-800' 
+                    : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {sale.sale_type.toUpperCase()}
+                </span>
+              </td>
+              <td className="px-6 py-4">
+                <div className="text-sm text-gray-900">
+                  {sale.items.length} items
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm font-bold text-emerald-700">
+                  KES {sale.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filtered.map((s) => (
-              <tr key={s.id} className="hover:bg-gray-50">
-                <td className="px-3 py-3 text-gray-600">{new Date(s.date).toLocaleString()}</td>
-                <td className="px-3 py-3 text-emerald-900">{s.productName}</td>
-                <td className="px-3 py-3 text-emerald-700">{s.supplier || '-'}</td>
-                <td className="px-3 py-3">{s.quantity}</td>
-                <td className="px-3 py-3 font-medium text-emerald-800">${s.amount.toFixed(2)}</td>
-                <td className="px-3 py-3">
-                  {onDelete ? (
-                    <button onClick={()=>onDelete(s.id)} className="text-sm text-red-600">Delete</button>
-                  ) : (
-                    <span className="text-sm text-gray-500">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={4} className="px-3 py-3 text-right text-sm font-semibold text-gray-600">Total</td>
-              <td className="px-3 py-3 font-semibold text-emerald-900">${total.toFixed(2)}</td>
-              <td />
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

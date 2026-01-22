@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -12,6 +12,7 @@ import 'react-toastify/dist/ReactToastify.css';
  */
 export default function AdminAuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // API base URL
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
@@ -21,6 +22,18 @@ export default function AdminAuthPage() {
   const [loading, setLoading] = useState<boolean>(false); 
   const [email, setEmail] = useState<string>('');
   const [otp, setOtp] = useState<string>('');
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    const adminEmail = localStorage.getItem('admin_email');
+    
+    if (token && adminEmail) {
+      // Already logged in, redirect to intended page or dashboard
+      const redirect = searchParams.get('redirect') || '/admin/dashboard/sales';
+      router.push(redirect);
+    }
+  }, [router, searchParams]);
 
   /**
    * Step 1: Request OTP from backend
@@ -97,9 +110,12 @@ export default function AdminAuthPage() {
 
         toast.success("Login successful! Redirecting...");
 
-        // Redirect after short delay
+        // Get redirect URL from query params or use default
+        const redirect = searchParams.get('redirect') || '/admin/dashboard/sales';
+
+        // Use window.location for a hard redirect
         setTimeout(() => {
-          router.push('/admin/dashboard/overview');
+          window.location.href = redirect;
         }, 1000);
       } else {
         toast.error(data.detail || "Invalid OTP");
@@ -111,7 +127,6 @@ export default function AdminAuthPage() {
       setLoading(false);
     }
   };
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 to-gray-50 p-4">
@@ -129,7 +144,7 @@ export default function AdminAuthPage() {
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
         {/* STEP 1: EMAIL INPUT */}
-        {step === 1 && (
+        {step === 1 ? (
           <form onSubmit={handleRequestOtp} className="space-y-5">
             <div className="text-center">
               <div className="mx-auto w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
@@ -169,8 +184,6 @@ export default function AdminAuthPage() {
                 </>
               ) : 'Get OTP'}
             </button>
-
-            
           </form>
         ) : (
           <form onSubmit={handleVerifyOtp} className="space-y-5">
@@ -251,7 +264,6 @@ export default function AdminAuthPage() {
               <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
                 <p className="font-medium mb-1">Development Hint:</p>
                 <p>Check Django console for generated OTP after requesting.</p>
-                <p>Or use the mock login button above.</p>
               </div>
             )}
           </form>

@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Menu, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import Link from 'next/link';
+
 
 interface HeaderProps {
   onCartClick: () => void;
@@ -99,15 +101,32 @@ export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             exit={{ opacity: 0, y: -20 }}
             className="md:hidden pb-4 flex flex-col gap-4"
           >
-            <a href="/" className="font-medium transition-colors" style={{ color: '#0091AD' }} onClick={() => setIsMenuOpen(false)}>
-              Products
-            </a>
-            <a href="/about" className="font-medium transition-colors" style={{ color: '#0091AD' }} onClick={() => setIsMenuOpen(false)}>
-              About
-            </a>
-            <a href="/contact" className="font-medium transition-colors" style={{ color: '#0091AD' }} onClick={() => setIsMenuOpen(false)}>
-              Contact
-            </a>
+            <Link 
+        href="/" 
+        className="font-medium transition-colors hover:opacity-80" 
+        style={{ color: '#0091AD' }} 
+        onClick={() => setIsMenuOpen(false)}
+      >
+        Products
+      </Link>
+
+      <Link 
+        href="/about" 
+        className="font-medium transition-colors hover:opacity-80" 
+        style={{ color: '#0091AD' }} 
+        onClick={() => setIsMenuOpen(false)}
+      >
+        About
+      </Link>
+
+      <Link 
+        href="/contact" 
+        className="font-medium transition-colors hover:opacity-80" 
+        style={{ color: '#0091AD' }} 
+        onClick={() => setIsMenuOpen(false)}
+      >
+        Contact
+      </Link>
           </motion.nav>
         )}
       </div>

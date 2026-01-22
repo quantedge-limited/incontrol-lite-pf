@@ -24,7 +24,7 @@ export const About: React.FC = () => {
   ];
 
   return (
-    <section id="about" className="py-20" style={{ background: 'linear-gradient(90deg, #f0fbfd 0%, #e6f7fb 100%)' }}>
+    <section id="about" className="py-20" >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -138,7 +138,7 @@ export const About: React.FC = () => {
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <h3 className="text-3xl font-bold text-gray-900 mb-12 text-center">Why Choose Mams Entreprise?</h3>
+          <h3 className="text-3xl font-bold text-gray-900 mb-12 text-center">Why Choose Mams Enterprise?</h3>
           <div className="grid md:grid-cols-3 gap-8">
             {values.map((value, index) => {
               const Icon = value.icon;

@@ -22,7 +22,6 @@ export default function SalesTable({ sales, onDelete }: { sales: Sale[]; onDelet
               <th className="px-3 py-2">Date</th>
               <th className="px-3 py-2">Product</th>
               <th className="px-3 py-2">Phone number</th>
-              <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Qty</th>
               <th className="px-3 py-2">Amount</th>
               <th className="px-3 py-2">Actions</th>

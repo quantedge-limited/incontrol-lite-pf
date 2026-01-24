@@ -34,10 +34,7 @@ export interface ChartData {
 
 export interface Sale {
   id: string;
-  client?: {
-    id: string;
-    name: string;
-  };
+  client?: { id: string; name: string };
   buyer_name?: string;
   buyer_email?: string;
   buyer_phone?: string;
@@ -46,23 +43,16 @@ export interface Sale {
   notes?: string;
   items: Array<{
     id: string;
-    inventory: {
-      id: string;
-      name: string;
-    };
+    inventory: { id: string; name: string };
     quantity: number;
     price_per_unit: number;
     total_price: number;
   }>;
-  created_by?: {
-    id: string;
-    name: string;
-  };
+  created_by?: { id: string; name: string };
   created_at: string;
   updated_at: string;
 }
 
-// New: Cart API types
 export interface CartItem {
   id: string;
   inventory_id: number;
@@ -90,7 +80,6 @@ export interface CheckoutDto {
   notes?: string;
 }
 
-// New: Create sale DTO
 export interface CreateSaleDto {
   client?: string;
   buyer_name?: string;
@@ -107,111 +96,85 @@ export interface CreateSaleDto {
   }>;
 }
 
-// Helper function for API requests
+// -------------------
+// HELPER FUNCTION
+// -------------------
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
   requireAuth: boolean = true
 ): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  const headers: HeadersInit = { 'Content-Type': 'application/json', ...options.headers };
 
   if (requireAuth) {
     const token = localStorage.getItem('access_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
+    if (!token) throw new Error('Authentication token missing');
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers,
-    credentials: 'include', // Important for session cookies
+    credentials: 'include', // for session cookies
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Network error' }));
+    let error: any;
+    try {
+      error = await response.json();
+    } catch {
+      error = { detail: 'Network error' };
+    }
     throw new Error(error.detail || `HTTP ${response.status}`);
   }
 
   return response.json();
 }
 
+// -------------------
+// SALES API
+// -------------------
 export const salesApi = {
-  // Get sales statistics for dashboard
-  async getStats(): Promise<SalesStats> {
-    return apiRequest<SalesStats>('/sales/stats/');
-  },
+  // Dashboard stats
+  getStats: () => apiRequest<SalesStats>('/sales/stats/'),
 
-  // Get chart data
-  async getChartData(): Promise<ChartData> {
-    return apiRequest<ChartData>('/sales/chart-data/');
-  },
+  getChartData: () => apiRequest<ChartData>('/sales/chart-data/'),
 
-  // List all sales
-  async list(): Promise<Sale[]> {
-    return apiRequest<Sale[]>('/sales/');
-  },
+  list: () => apiRequest<Sale[]>('/sales/'),
 
-  // Create a sale (for walk-in sales)
-  async create(saleData: CreateSaleDto): Promise<Sale> {
-    return apiRequest<Sale>('/sales/create/', {
-      method: 'POST',
-      body: JSON.stringify(saleData),
-    });
-  },
+  create: (saleData: CreateSaleDto) =>
+    apiRequest<Sale>('/sales/create/', { method: 'POST', body: JSON.stringify(saleData) }),
 
-  // Get single sale
-  async get(id: string): Promise<Sale> {
-    return apiRequest<Sale>(`/sales/${id}/`);
-  },
+  get: (id: string) => apiRequest<Sale>(`/sales/${id}/`),
 
-  // Delete sale
-  async delete(id: string): Promise<void> {
-    return apiRequest<void>(`/sales/${id}/delete/`, {
-      method: 'DELETE',
-    });
-  },
+  delete: (id: string) =>
+    apiRequest<void>(`/sales/${id}/delete/`, { method: 'DELETE' }),
 
-  // Cart API (no auth required for guest carts)
-  async getCart(): Promise<Cart> {
-    return apiRequest<Cart>('/sales/cart/', {
-      method: 'GET',
-    }, false);
-  },
+  // -------------------
+  // CART API (guest-friendly)
+  // -------------------
+  getCart: () => apiRequest<Cart>('/sales/cart/', {}, false),
 
-  async addToCart(inventoryId: number, quantity: number = 1): Promise<CartItem> {
-    return apiRequest<CartItem>('/sales/cart/', {
-      method: 'POST',
-      body: JSON.stringify({ inventory_id: inventoryId, quantity }),
-    }, false);
-  },
+  addToCart: (inventoryId: number, quantity: number = 1) =>
+    apiRequest<CartItem>(
+      '/sales/cart/',
+      { method: 'POST', body: JSON.stringify({ inventory_id: inventoryId, quantity }) },
+      false
+    ),
 
-  async updateCartItem(itemId: string, quantity: number): Promise<CartItem> {
-    return apiRequest<CartItem>(`/sales/cart/items/${itemId}/`, {
-      method: 'PUT',
-      body: JSON.stringify({ quantity }),
-    }, false);
-  },
+  updateCartItem: (itemId: string, quantity: number) =>
+    apiRequest<CartItem>(
+      `/sales/cart/items/${itemId}/`,
+      { method: 'PUT', body: JSON.stringify({ quantity }) },
+      false
+    ),
 
-  async removeCartItem(itemId: string): Promise<void> {
-    return apiRequest<void>(`/sales/cart/items/${itemId}/`, {
-      method: 'DELETE',
-    }, false);
-  },
+  removeCartItem: (itemId: string) =>
+    apiRequest<void>(`/sales/cart/items/${itemId}/`, { method: 'DELETE' }, false),
 
-  async clearCart(): Promise<void> {
-    return apiRequest<void>('/sales/cart/', {
-      method: 'DELETE',
-    }, false);
-  },
+  clearCart: () =>
+    apiRequest<void>('/sales/cart/', { method: 'DELETE' }, false),
 
-  async checkout(checkoutData: CheckoutDto): Promise<Sale> {
-    return apiRequest<Sale>('/sales/checkout/', {
-      method: 'POST',
-      body: JSON.stringify(checkoutData),
-    }, false);
-  },
+  checkout: (checkoutData: CheckoutDto) =>
+    apiRequest<Sale>('/sales/checkout/', { method: 'POST', body: JSON.stringify(checkoutData) }, false),
 };

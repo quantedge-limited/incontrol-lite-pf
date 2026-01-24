@@ -1,3 +1,5 @@
+import { authApi } from './authApi';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
 export interface Product {
@@ -12,7 +14,7 @@ export interface Product {
   quantity: number;
   price: number;
   description?: string;
-  images: string[];  // Base64 images
+  images: string[];  // Base64 or URLs
   created_at: string;
   updated_at: string;
   is_active: boolean;
@@ -33,39 +35,35 @@ export const productApi = {
   async create(productData: ProductFormData): Promise<Product> {
     const res = await fetch(`${API_BASE}/inventory/create/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
+      headers: authApi.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         ...productData,
-        // Map frontend fields to backend fields
-        quantity: productData.quantity,
         price_per_unit: productData.price,
-        name: productData.name,
-        description: productData.description,
         brand: productData.brand_id,
         supplier: productData.supplier_id,
       }),
     });
+
     if (!res.ok) {
-      const error = await res.json();
+      const error = await res.json().catch(() => ({ detail: 'Failed to create product' }));
       throw new Error(error.detail || 'Failed to create product');
     }
-    return await res.json();
+
+    return res.json();
   },
 
   // List all products
   async list(): Promise<Product[]> {
     const res = await fetch(`${API_BASE}/inventory/`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
+      headers: authApi.getAuthHeaders(),
     });
-    if (!res.ok) throw new Error('Failed to fetch products');
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to fetch products' }));
+      throw new Error(error.detail || 'Failed to fetch products');
+    }
+
     const data = await res.json();
-    
-    // Transform backend data to frontend format
     return data.map((item: any) => ({
       id: item.id,
       name: item.name,
@@ -76,10 +74,10 @@ export const productApi = {
       quantity: item.quantity,
       price: item.price_per_unit,
       description: item.description,
-      images: item.images || [],  // You'll need to add images to your Inventory model
+      images: item.images || [],
       created_at: item.created_at,
       updated_at: item.updated_at,
-      is_active: true,
+      is_active: item.is_active ?? true,
     }));
   },
 
@@ -87,10 +85,7 @@ export const productApi = {
   async update(id: string, productData: Partial<ProductFormData>): Promise<Product> {
     const res = await fetch(`${API_BASE}/inventory/${id}/update/`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
+      headers: authApi.getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         ...productData,
         price_per_unit: productData.price,
@@ -98,18 +93,25 @@ export const productApi = {
         supplier: productData.supplier_id,
       }),
     });
-    if (!res.ok) throw new Error('Failed to update product');
-    return await res.json();
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to update product' }));
+      throw new Error(error.detail || 'Failed to update product');
+    }
+
+    return res.json();
   },
 
   // Delete product
   async delete(id: string): Promise<void> {
     const res = await fetch(`${API_BASE}/inventory/${id}/delete/`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
+      headers: authApi.getAuthHeaders(),
     });
-    if (!res.ok) throw new Error('Failed to delete product');
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to delete product' }));
+      throw new Error(error.detail || 'Failed to delete product');
+    }
   },
 };

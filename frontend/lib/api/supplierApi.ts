@@ -1,8 +1,11 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+
+import { authApi } from './authApi';
 
 export interface Supplier {
   id: string;
-  name: string;  // Add this
+  name: string;
   email?: string;
   phone_number?: string;
   address?: string;
@@ -17,75 +20,99 @@ export interface Supplier {
   };
 }
 
+// Define the type used for creating/updating suppliers
+export interface SupplierFormData {
+  name: string;
+  email?: string;
+  phone_number?: string;
+  address?: string;
+  supplies?: any; // optional field mapped to additional_info
+  additional_info?: any;
+}
+
 export const supplierApi = {
   // Create supplier
-  async create(supplierData: any) {
-    // Convert supplies field to additional_info if needed
-    const data = {
+  async create(supplierData: SupplierFormData): Promise<Supplier> {
+    const payload = {
       ...supplierData,
-      additional_info: supplierData.supplies ? { supplies: supplierData.supplies } : null,
+      additional_info: supplierData.supplies
+        ? { supplies: supplierData.supplies }
+        : supplierData.additional_info || null,
     };
-    delete data.supplies;
+
+    delete (payload as any).supplies;
 
     const res = await fetch(`${API_BASE}/staff/suppliers/create/`, {
       method: 'POST',
-      headers: {
+      headers: authApi.getAuthHeaders({
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-      body: JSON.stringify(data),
+      }),
+      body: JSON.stringify(payload),
     });
+
     if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.detail || 'Failed to create supplier');
+      const error = await res.json().catch(() => ({ detail: 'Failed to create supplier' }));
+      throw new Error(error.detail);
     }
-    return await res.json();
+
+    return res.json();
   },
 
   // List all suppliers
-  async list() {
+  async list(): Promise<Supplier[]> {
     const res = await fetch(`${API_BASE}/staff/suppliers/`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
+      headers: authApi.getAuthHeaders(),
     });
-    if (!res.ok) throw new Error('Failed to fetch suppliers');
-    return await res.json();
-  },
 
-  // Update supplier
-  async update(id: string, supplierData: any) {
-    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/update/`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-      body: JSON.stringify(supplierData),
-    });
-    if (!res.ok) throw new Error('Failed to update supplier');
-    return await res.json();
-  },
+    if (!res.ok) {
+      throw new Error('Failed to fetch suppliers');
+    }
 
-  // Delete supplier
-  async delete(id: string) {
-    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/delete/`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
-    });
-    if (!res.ok) throw new Error('Failed to delete supplier');
+    return res.json();
   },
 
   // Get single supplier
-  async get(id: string) {
+  async get(id: string): Promise<Supplier> {
     const res = await fetch(`${API_BASE}/staff/suppliers/${id}/`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-      },
+      headers: authApi.getAuthHeaders(),
     });
-    if (!res.ok) throw new Error('Failed to fetch supplier');
-    return await res.json();
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch supplier');
+    }
+
+    return res.json();
+  },
+
+  // Update supplier
+  async update(
+    id: string,
+    supplierData: Partial<SupplierFormData>
+  ): Promise<Supplier> {
+    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/update/`, {
+      method: 'PUT',
+      headers: authApi.getAuthHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(supplierData),
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to update supplier');
+    }
+
+    return res.json();
+  },
+
+  // Delete supplier
+  async delete(id: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/delete/`, {
+      method: 'DELETE',
+      headers: authApi.getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to delete supplier');
+    }
   },
 };

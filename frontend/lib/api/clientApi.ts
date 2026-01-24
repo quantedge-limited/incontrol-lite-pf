@@ -1,80 +1,141 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
+import { authApi } from './authApi';
+
 export interface Client {
   id: string;
   first_name: string;
   last_name: string;
   email?: string;
-  phone?: string;
+  phone?: string;  // Note: In Django it's "phone_number", but you can map it
   address?: string;
+  additional_info?: string; // Add this if you need it
   created_at: string;
   updated_at: string;
 }
 
-// Helper function for API requests
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Network error' }));
-    throw new Error(error.detail || `HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
 export const clientApi = {
-  // List all clients
+  // List all clients - using the correct endpoint from Django
   async list(): Promise<Client[]> {
-    return apiRequest<Client[]>('/clients/');
+    const res = await fetch(`${API_BASE}/staff/clients/`, {
+      method: 'GET', // Explicitly set GET method
+      headers: authApi.getAuthHeaders(),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to fetch clients' }));
+      throw new Error(error.detail || 'Failed to fetch clients');
+    }
+    return res.json();
   },
 
-  // Get single client
+  // Get single client - from Django: ClientRetrieveView
   async get(id: string): Promise<Client> {
-    return apiRequest<Client>(`/clients/${id}/`);
+    const res = await fetch(`${API_BASE}/staff/clients/${id}/`, {
+      method: 'GET',
+      headers: authApi.getAuthHeaders(),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to fetch client' }));
+      throw new Error(error.detail || 'Failed to fetch client');
+    }
+    return res.json();
   },
 
-  // Create client
+  // Create client - from Django: ClientCreateView
   async create(clientData: Partial<Client>): Promise<Client> {
-    return apiRequest<Client>('/clients/', {
+    // Map phone to phone_number for Django
+    const mappedData: any = { ...clientData };
+    if (mappedData.phone !== undefined) {
+      mappedData.phone_number = mappedData.phone;
+      delete mappedData.phone;
+    }
+
+    const res = await fetch(`${API_BASE}/staff/clients/`, {
       method: 'POST',
-      body: JSON.stringify(clientData),
+      headers: authApi.getAuthHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(mappedData),
     });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to create client' }));
+      throw new Error(error.detail || 'Failed to create client');
+    }
+
+    const result = await res.json();
+    // Map phone_number back to phone for frontend consistency
+    if (result.phone_number) {
+      result.phone = result.phone_number;
+    }
+    return result;
   },
 
-  // Update client
+  // Update client - from Django: ClientUpdateView
   async update(id: string, clientData: Partial<Client>): Promise<Client> {
-    return apiRequest<Client>(`/clients/${id}/`, {
+    // Map phone to phone_number for Django
+    const mappedData: any = { ...clientData };
+    if (mappedData.phone !== undefined) {
+      mappedData.phone_number = mappedData.phone;
+      delete mappedData.phone;
+    }
+
+    const res = await fetch(`${API_BASE}/staff/clients/${id}/update/`, {
       method: 'PUT',
-      body: JSON.stringify(clientData),
+      headers: authApi.getAuthHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(mappedData),
     });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to update client' }));
+      throw new Error(error.detail || 'Failed to update client');
+    }
+
+    const result = await res.json();
+    // Map phone_number back to phone for frontend consistency
+    if (result.phone_number) {
+      result.phone = result.phone_number;
+    }
+    return result;
   },
 
-  // Delete client
+  // Delete client - from Django: ClientDeleteView
   async delete(id: string): Promise<void> {
-    return apiRequest<void>(`/clients/${id}/`, {
+    const res = await fetch(`${API_BASE}/staff/clients/${id}/`, {
       method: 'DELETE',
+      headers: authApi.getAuthHeaders(),
     });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ detail: 'Failed to delete client' }));
+      throw new Error(error.detail || 'Failed to delete client');
+    }
   },
 
-  // Search clients by name or email
+  // Note: You don't have a search endpoint in Django yet
+  // You'll need to implement it in Django first
   async search(query: string): Promise<Client[]> {
-    return apiRequest<Client[]>(`/clients/search/?q=${encodeURIComponent(query)}`);
+    // Check if search endpoint exists first
+    const res = await fetch(`${API_BASE}/staff/clients/search/?q=${encodeURIComponent(query)}`, {
+      headers: authApi.getAuthHeaders(),
+    });
+    
+    if (!res.ok) {
+      if (res.status === 404) {
+        // If search endpoint doesn't exist, fall back to filtering on client side
+        const allClients = await this.list();
+        return allClients.filter(client => 
+          client.first_name.toLowerCase().includes(query.toLowerCase()) ||
+          client.last_name.toLowerCase().includes(query.toLowerCase()) ||
+          (client.email && client.email.toLowerCase().includes(query.toLowerCase()))
+        );
+      }
+      const error = await res.json().catch(() => ({ detail: 'Failed to search clients' }));
+      throw new Error(error.detail || 'Failed to search clients');
+    }
+    
+    return res.json();
   },
 };

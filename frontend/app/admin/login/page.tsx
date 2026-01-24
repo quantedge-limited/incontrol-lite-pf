@@ -98,10 +98,28 @@ export default function AdminAuthPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Save tokens and admin data
+        // Save tokens to localStorage (for client-side use)
         localStorage.setItem('access_token', data.access);
         localStorage.setItem('refresh_token', data.refresh);
         localStorage.setItem('admin_email', email);
+        
+        // CRITICAL: Save tokens to cookies (for proxy/middleware)
+        const cookieOptions = `path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+        
+        // Set access_token cookie (proxy checks for this)
+        document.cookie = `access_token=${data.access}; ${cookieOptions}`;
+        
+        // Also set auth_token cookie (proxy checks for this too)
+        document.cookie = `auth_token=${data.access}; ${cookieOptions}`;
+        
+        // Optional: Set refresh_token cookie
+        document.cookie = `refresh_token=${data.refresh}; ${cookieOptions}`;
+        
+        // Log for debugging
+        console.log('Cookies set:', {
+          access_token: data.access.substring(0, 20) + '...',
+          auth_token: data.access.substring(0, 20) + '...'
+        });
         
         // Save admin info if available
         if (data.admin) {
@@ -111,12 +129,22 @@ export default function AdminAuthPage() {
         toast.success("Login successful! Redirecting...");
 
         // Get redirect URL from query params or use default
-        const redirect = searchParams.get('redirect') || '/admin/dashboard/sales';
+        const redirect =
+          searchParams.get('redirect') ?? '/admin/dashboard/sales';
 
-        // Use window.location for a hard redirect
+        toast.success("Login successful! Redirecting...");
+
         setTimeout(() => {
           window.location.href = redirect;
-        }, 1000);
+        }, 800);
+
+
+        // Use window.location for a hard redirect (ensures cookies are sent)
+        //setTimeout(() => {
+        //  console.log('Redirecting to:', redirect);
+        //  window.location.href = redirect;
+        //}, 1000);
+        
       } else {
         toast.error(data.detail || "Invalid OTP");
       }

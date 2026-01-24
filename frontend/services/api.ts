@@ -1,14 +1,13 @@
 // services/api.ts
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://127.0.0.1:8000/api';
 
-// Generic API service with authentication
 class ApiService {
-  private async request(endpoint: string, options: RequestInit = {}) {
+  private async request(endpoint: string, options: RequestInit = {}, auth: boolean = true) {
     const token = localStorage.getItem('access_token');
     const headers = {
       'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(auth && token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers,
     };
 
@@ -24,7 +23,12 @@ class ApiService {
     return response.json();
   }
 
-  // Inventory methods
+  // Public endpoint
+  async getCustomerProducts() {
+    return this.request('/inventory/customer/products/', {}, false); // no auth
+  }
+
+  // Other inventory methods
   async getInventory() {
     return this.request('/inventory/');
   }
@@ -34,23 +38,15 @@ class ApiService {
   }
 
   async createInventoryItem(data: any) {
-    return this.request('/inventory/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    return this.request('/inventory/', { method: 'POST', body: JSON.stringify(data) });
   }
 
   async updateInventoryItem(id: string, data: any) {
-    return this.request(`/inventory/${id}/`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
+    return this.request(`/inventory/${id}/`, { method: 'PUT', body: JSON.stringify(data) });
   }
 
   async deleteInventoryItem(id: string) {
-    return this.request(`/inventory/${id}/`, {
-      method: 'DELETE',
-    });
+    return this.request(`/inventory/${id}/`, { method: 'DELETE' });
   }
 }
 

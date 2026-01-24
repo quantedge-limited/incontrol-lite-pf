@@ -50,7 +50,7 @@ export const clientApi = {
       delete mappedData.phone;
     }
 
-    const res = await fetch(`${API_BASE}/staff/clients/`, {
+    const res = await fetch(`${API_BASE}/staff/clients/create/`, {
       method: 'POST',
       headers: authApi.getAuthHeaders({
         'Content-Type': 'application/json',
@@ -103,7 +103,7 @@ export const clientApi = {
 
   // Delete client - from Django: ClientDeleteView
   async delete(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/staff/clients/${id}/`, {
+    const res = await fetch(`${API_BASE}/staff/clients/${id}/delete/`, {
       method: 'DELETE',
       headers: authApi.getAuthHeaders(),
     });

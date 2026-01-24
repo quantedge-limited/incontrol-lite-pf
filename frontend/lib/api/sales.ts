@@ -1,94 +1,7 @@
-import { Sale } from '@/components/admin/sales/types';
+// lib/api/sales.ts - Complete file with fixes
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
-// Base API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-  status: number;
-}
-
-// Helper: get auth headers
-function getAuthHeaders(additionalHeaders: Record<string, string> = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...additionalHeaders,
-  };
-}
-
-async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-  const url = `${API_BASE_URL}${endpoint}`;
-
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers: options.headers || getAuthHeaders(),
-      credentials: 'include',
-    });
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      return {
-        error: data?.detail || `HTTP ${response.status}`,
-        status: response.status,
-      };
-    }
-
-    return {
-      data: data as T,
-      status: response.status,
-    };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : 'Network error',
-      status: 500,
-    };
-  }
-}
-
-// Sale Types
-export interface SaleItem {
-  id?: string;
-  inventory: string;
-  inventory_name?: string;
-  quantity: number;
-  price_per_unit: number;
-  total_price?: number;
-}
-
-export interface BackendSale {
-  id: string;
-  client?: string | null;
-  buyer_name?: string;
-  buyer_email?: string;
-  buyer_phone?: string;
-  buyer_address?: string;
-  sale_type: 'online' | 'walkin';
-  total_amount: number;
-  notes?: string;
-  items: SaleItem[];
-  created_by?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateSaleDto {
-  client?: string;
-  buyer_name?: string;
-  buyer_email?: string;
-  buyer_phone?: string;
-  buyer_address?: string;
-  sale_type: 'online' | 'walkin';
-  total_amount: number;
-  notes?: string;
-  items: Omit<SaleItem, 'id' | 'inventory_name' | 'total_price'>[];
-}
-
-// Cart Types
+// ===== TYPES =====
 export interface CartItem {
   id: string;
   inventory_id: number;
@@ -107,126 +20,224 @@ export interface Cart {
   updated_at: string;
 }
 
-export interface CheckoutDto {
-  buyer_name: string;
-  buyer_email: string;
-  buyer_phone: string;
-  buyer_address: string;
-  sale_type: 'online';
+export interface SaleItem {
+  id: string;
+  inventory: number;
+  quantity: number;
+  price_per_unit: number;
+  total_price: number;
+}
+
+export interface Sale {
+  id: string;
+  sale_type: 'online' | 'walkin';
+  total_amount: number;
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
   notes?: string;
+  client?: number;
+  buyer_name?: string;
+  buyer_phone?: string;
+  buyer_email?: string;
+  buyer_address?: string;
+  created_at: string;
+  updated_at: string;
+  items: SaleItem[];
 }
 
-// Sales Statistics Types
-export interface SalesStats {
-  total_revenue: number;
-  recent_revenue: number;
-  total_sales: number;
-  recent_sales: number;
-  avg_order_value: number;
-  monthly_trend: number[];
-  total_profit: number;
-  recent_profit: number;
-  top_products: Array<{
-    inventory__name: string;
-    total_quantity: number;
-    total_revenue: number;
-  }>;
-  low_stock_items: number;
-  out_of_stock_items: number;
-  recent_sales: Array<{
-    id: string;
-    date: string;
-    type: string;
-    amount: number;
-    client: string;
-    items_count: number;
-  }>;
+
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  requireAuth: boolean = false
+): Promise<T> {
+  const url = `${API_BASE}${endpoint}`;
+  
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  // Only add auth token if required
+  if (requireAuth) {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`API Error [${response.status}] for ${url}:`, text);
+      
+      let error: any;
+      try {
+        error = JSON.parse(text);
+      } catch {
+        error = { detail: text || `HTTP ${response.status}` };
+      }
+      
+      // More detailed error message
+      const errorMessage = error.detail || error.error || error.message || 
+                          (error.errors ? JSON.stringify(error.errors) : `HTTP ${response.status}`);
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
 }
 
-export interface ChartData {
-  months: string[];
-  totals: number[];
-  counts: number[];
-}
+// ===== POS API (Admin) =====
+export const posApi = {
+  // Sales
+  getSales: (params?: { 
+    start_date?: string; 
+    end_date?: string; 
+    sale_type?: 'online' | 'walkin';
+    page?: number;
+    page_size?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.start_date) queryParams.append('start_date', params.start_date);
+    if (params?.end_date) queryParams.append('end_date', params.end_date);
+    if (params?.sale_type) queryParams.append('sale_type', params.sale_type);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
+    
+    const queryString = queryParams.toString();
+    const url = `/sales/pos/sales/${queryString ? `?${queryString}` : ''}`;
+    
+    return apiRequest<{
+      sales: Sale[];
+      total: number;
+      page: number;
+      page_size: number;
+      pages: number;
+    }>(url);
+  },
 
-// Sales API
-export const salesApi = {
-  createSale: async (saleData: CreateSaleDto): Promise<ApiResponse<BackendSale>> =>
-    apiRequest<BackendSale>('/sales/create/', {
-      method: 'POST',
-      body: JSON.stringify(saleData),
-      headers: getAuthHeaders(),
-    }),
+  getSale: (saleId: string) =>
+    apiRequest<Sale>(`/sales/pos/sales/${saleId}/`),
 
-  getSales: async (): Promise<ApiResponse<BackendSale[]>> =>
-    apiRequest<BackendSale[]>('/sales/', {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    }),
+  createSale: (data: {
+    client?: number;
+    sale_type?: 'walkin' | 'online';
+    total_amount?: number;
+    notes?: string;
+    buyer_name?: string;
+    buyer_phone?: string;
+    buyer_email?: string;
+    buyer_address?: string;
+    payment_method?: 'cash' | 'mpesa';
+    items: {
+      inventory: number;  // Fixed: was inventory_id
+      quantity: number;
+      price_per_unit?: number;
+    }[];
+  }) => apiRequest<Sale>('/sales/pos/sales/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 
-  getSale: async (id: string): Promise<ApiResponse<BackendSale>> =>
-    apiRequest<BackendSale>(`/sales/${id}/`, {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    }),
-
-  deleteSale: async (id: string): Promise<ApiResponse<void>> =>
-    apiRequest<void>(`/sales/${id}/delete/`, {
+  cancelSale: (saleId: string) =>
+    apiRequest<{ message: string }>(`/sales/pos/sales/${saleId}/`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
-    }),
-
-  getSalesStats: async (): Promise<ApiResponse<SalesStats>> =>
-    apiRequest<SalesStats>('/sales/stats/', {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    }),
-
-  getChartData: async (): Promise<ApiResponse<ChartData>> =>
-    apiRequest<ChartData>('/sales/chart-data/', {
-      method: 'GET',
-      headers: getAuthHeaders(),
     }),
 };
 
-// Cart API
+// ===== CART API (Public) =====
 export const cartApi = {
-  getCart: async (): Promise<ApiResponse<Cart>> =>
+  getCart: () =>
+    apiRequest<Cart>('/sales/cart/'),
+
+  addToCart: (inventoryId: number, quantity: number = 1) =>
     apiRequest<Cart>('/sales/cart/', {
-      method: 'GET',
-      headers: getAuthHeaders(),
-    }),
-
-  addToCart: async (inventoryId: number, quantity: number = 1): Promise<ApiResponse<CartItem>> =>
-    apiRequest<CartItem>('/sales/cart/', {
       method: 'POST',
-      body: JSON.stringify({ inventory_id: inventoryId, quantity }),
-      headers: getAuthHeaders(),
+      body: JSON.stringify({ 
+        inventory_id: inventoryId,  // Fixed: was inventory_id
+        quantity 
+      }),
     }),
 
-  updateCartItem: async (itemId: string, quantity: number): Promise<ApiResponse<CartItem>> =>
-    apiRequest<CartItem>(`/sales/cart/items/${itemId}/`, {
+  updateCartItem: (itemId: string, quantity: number) =>
+    apiRequest<Cart>(`/sales/cart/items/${itemId}/`, {
       method: 'PUT',
       body: JSON.stringify({ quantity }),
-      headers: getAuthHeaders(),
-    }),
+    }, false),
 
-  removeCartItem: async (itemId: string): Promise<ApiResponse<void>> =>
-    apiRequest<void>(`/sales/cart/items/${itemId}/`, {
+  removeCartItem: (itemId: string) =>
+    apiRequest<Cart>(`/sales/cart/items/${itemId}/`, {
       method: 'DELETE',
-      headers: getAuthHeaders(),
     }),
 
-  clearCart: async (): Promise<ApiResponse<void>> =>
-    apiRequest<void>('/sales/cart/', {
+  clearCart: () =>
+    apiRequest<{ message: string }>('/sales/cart/', {
       method: 'DELETE',
-      headers: getAuthHeaders(),
     }),
+};
 
-  checkout: async (checkoutData: CheckoutDto): Promise<ApiResponse<BackendSale>> =>
-    apiRequest<BackendSale>('/sales/checkout/', {
-      method: 'POST',
-      body: JSON.stringify(checkoutData),
-      headers: getAuthHeaders(),
-    }),
+// ===== CHECKOUT API =====
+export const checkoutApi = {
+  checkout: (data: {
+    buyer_name: string;
+    buyer_email: string;
+    buyer_phone: string;
+    buyer_address: string;
+    notes?: string;
+    payment_method: 'mpesa';
+  }) => apiRequest<{
+    success: boolean;
+    order_id: string;
+    order_number: string;
+    total_amount: number;
+    payment_id: string;
+    payment_reference?: string;
+    message: string;
+    payment_response?: any;
+  }>('/sales/checkout/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  getOrderStatus: (orderId: string) =>
+    apiRequest<{
+      order_id: string;
+      order_number: string;
+      status: string;
+      total_amount: number;
+      created_at: string;
+      items_count: number;
+      buyer_name: string;
+      buyer_phone: string;
+      payment_id?: string;
+      payment_status?: string;
+      payment_method?: string;
+      payment_reference?: string;
+    }>(`/sales/orders/${orderId}/status/`),
+};
+
+// ===== HEALTH CHECK =====
+export const healthApi = {
+  check: () => apiRequest<{
+    status: string;
+    service: string;
+    timestamp: string;
+  }>('/sales/health/'),
 };

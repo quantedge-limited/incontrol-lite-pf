@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, CreditCard, Smartphone, Loader2 } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/context/cart/CartContext';
 import { orderApiService } from '@/services/orderApi';
 import { paymentApiService, PaymentRequestData } from '@/services/paymentApi';
 
@@ -154,6 +154,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
     }
   };
 
+  // Update the handleSubmit function in CheckoutModal.tsx
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
@@ -165,56 +166,37 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
       }
       setStep(2);
     } else if (step === 2) {
-      if (formData.paymentMethod === 'card' && (!formData.cardNumber || !formData.cardExpiry || !formData.cardCVC)) {
-        setErrorMessage('Please fill in all card details');
-        return;
-      }
-
       setIsProcessing(true);
       setPaymentStatus('idle');
 
       try {
-        // Sync cart with backend
-        await syncCartWithBackend();
-
-        // Prepare order data
-        const orderData = {
-          customer_email: formData.email,
-          customer_first_name: formData.firstName,
-          customer_last_name: formData.lastName,
-          customer_phone: formData.phone,
-          customer_address: formData.address,
-          items: safeCartItems.map(item => {
-            // FIXED: Ensure product_id is a number
-            let productId = item.productId;
-            
-            // If productId doesn't exist or is 0, try to parse item.id
-            if (!productId && productId !== 0) {
-              productId = parseInt(item.id);
-            }
-            
-            // Fallback to item.id if everything else fails
-            if (isNaN(productId as number)) {
-              productId = parseInt(item.id);
-            }
-            
-            return {
-              product_id: productId as number,
-              quantity: item.quantity,
-            };
-          }),
+        // Mock order creation (replace with real API later)
+        const mockOrderResponse = {
+          order_id: `ORD-${Date.now()}`,
+          total_amount: totalPrice,
+          message: 'Order created successfully',
+          customer: {
+            name: formData.firstName + ' ' + formData.lastName,
+            phone: formData.phone,
+            email: formData.email
+          }
         };
-
-        // Create order
-        const orderResponse = await orderApiService.checkout(orderData);
-        setOrderData(orderResponse);
+        
+        setOrderData(mockOrderResponse);
 
         // Handle payment based on method
         if (formData.paymentMethod === 'mpesa') {
-          await handleMpesaPayment(orderResponse.order_id);
+          // Mock M-Pesa payment
+          setPaymentStatus('pending');
+          
+          // Simulate payment processing
+          setTimeout(() => {
+            setPaymentStatus('success');
+            setOrderComplete(true);
+            clearCart();
+          }, 3000);
         } else {
-          // For card payments, we can mark as complete immediately
-          // In production, you'd integrate with a card payment gateway
+          // For card payments
           setOrderComplete(true);
           clearCart();
         }
@@ -228,6 +210,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
       }
     }
   };
+
+
 
   const resetForm = () => {
     setStep(1);

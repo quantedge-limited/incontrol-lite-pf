@@ -1,11 +1,9 @@
-// components/frontpage/Cart/CartSidebar.tsx
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react'; // Add useEffect
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, Trash2 } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
-import { CartItemComponent } from './CartItem';
+import { X, ShoppingCart, Trash2 } from 'lucide-react';
+import { useCart } from '@/context/cart/CartContext';
 
 interface CartSidebarProps {
   isOpen: boolean;
@@ -14,29 +12,26 @@ interface CartSidebarProps {
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }) => {
-  const { items, totalPrice, removeFromCart, updateQuantity } = useCart();
-  
-  // Local state to handle loading/initialization
+  const { items, totalPrice, removeFromCart, updateQuantity, clearCart } = useCart();
   const [isMounted, setIsMounted] = useState(false);
   
-  // Set mounted state after component mounts
   useEffect(() => {
     setIsMounted(true);
   }, []);
   
-  // Don't render anything on server-side or before mount
   if (!isMounted) {
     return null;
   }
   
-  // Safe cart items with default empty array
   const cartItems = items || [];
   
-  // Calculate total safely
-  const safeTotalPrice = cartItems.reduce(
+  // Calculate subtotal, tax, and total
+  const subtotal = totalPrice || cartItems.reduce(
     (sum, item) => sum + (item.price * (item.quantity || 1)), 
     0
   );
+  const tax = subtotal * 0.16; // 16% VAT
+  const total = subtotal + tax;
 
   return (
     <AnimatePresence>
@@ -59,7 +54,13 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
           >
             {/* Header */}
             <div className="flex justify-between items-center p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Your Cart</h2>
+              <div className="flex items-center gap-3">
+                <ShoppingCart size={24} className="text-emerald-600" />
+                <h2 className="text-xl font-bold text-gray-900">Shopping Cart</h2>
+                <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full text-sm font-medium">
+                  {cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0)} items
+                </span>
+              </div>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
                 <X size={24} />
               </button>
@@ -72,7 +73,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
             >
               {cartItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <ShoppingBag size={48} color="#d1d5db" className="mb-4" />
+                  <ShoppingCart size={48} color="#d1d5db" className="mb-4" />
                   <p className="text-gray-500 font-medium">Your cart is empty</p>
                 </div>
               ) : (
@@ -81,8 +82,16 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
                     <div key={item.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                       <div className="flex gap-4">
                         <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
-                          {item.image && (item.image.startsWith('data:') || item.image.startsWith('http')) ? (
-                            <img src={item.image} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                          {/* Use image_url if available, fallback to image_path */}
+                          {(item.image_url || item.image_path) ? (
+                            <img 
+                              src={item.image_url || item.image_path} 
+                              alt={item.name} 
+                              className="w-full h-full object-cover rounded-lg" 
+                              onError={(e) => {
+                                e.currentTarget.src = '/images/placeholder.jpg';
+                              }}
+                            />
                           ) : (
                             <span className="text-lg font-bold text-gray-600">
                               {item.name.slice(0, 2).toUpperCase()}
@@ -131,27 +140,46 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
             {/* Footer */}
             {cartItems.length > 0 && (
               <div className="border-t border-gray-200 p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-lg font-medium text-gray-700">Total:</span>
-                  <span className="text-3xl font-bold" style={{ color: '#0091AD' }}>
-                    KES {Number(safeTotalPrice).toFixed(0)}
-                  </span>
+                {/* Clear Cart Button */}
+                <button
+                  onClick={clearCart}
+                  className="w-full mb-4 px-4 py-3 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
+                >
+                  Clear All Items
+                </button>
+
+                {/* Summary */}
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Subtotal</span>
+                    <span className="font-medium">KES {subtotal.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>Tax (16% VAT)</span>
+                    <span className="font-medium">KES {tax.toFixed(0)}</span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t">
+                    <span>Total</span>
+                    <span>KES {total.toFixed(0)}</span>
+                  </div>
                 </div>
                 
+                {/* Checkout Button */}
                 <button
                   onClick={() => {
                     onCheckout();
                     onClose();
                   }}
-                  className="w-full py-4 text-white font-bold rounded-lg transition-all hover:opacity-90"
+                  className="w-full py-4 text-white font-bold rounded-lg transition-all hover:opacity-90 mb-3"
                   style={{ backgroundColor: '#0091AD' }}
                 >
                   Proceed to Checkout
                 </button>
                 
+                {/* Continue Shopping Button */}
                 <button
                   onClick={onClose}
-                  className="w-full py-3 mt-3 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors"
+                  className="w-full py-3 border-2 border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Continue Shopping
                 </button>

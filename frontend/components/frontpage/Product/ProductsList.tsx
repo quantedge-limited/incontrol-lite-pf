@@ -31,17 +31,18 @@ export const ProductsList: React.FC = () => {
 
         const data = await apiService.getCustomerProducts();
 
+        // In ProductsList component
         const mapped: Product[] = data
           .filter((item: any) => item.is_active && item.quantity > 0)
           .map((item: any) => ({
-            id: item.id,
+            id: item.id.toString(), // Keep as string if that's what your CardContext expects
             name: item.name,
             price: item.price_per_unit,
             description: item.description ?? '',
             inStock: item.quantity > 0,
             image_path: item.image_path ?? null,
             quantity: item.quantity,
-            brand: item.brand_name?.trim(),   // IMPORTANT
+            brand: item.brand_name?.trim(),
             supplier: item.supplier_name,
           }));
 

@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Check, Package } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/context/cart/CartContext'; // Fixed import path
 import { imageConfig } from '@/lib/imageConfig';
 import Image from 'next/image';
 
 export interface ProductCardProps {
-  id: string;
+  id: string; // This is a string
   name: string;
   price: number;
   description: string;
@@ -30,7 +30,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   brand,
   supplier,
 }) => {
-  const { addToCart } = useCart();
+  const { addItem } = useCart(); // Changed from addToCart to addItem
   const [isAdded, setIsAdded] = useState(false);
   const [currentQuantity, setCurrentQuantity] = useState(quantity);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,20 +40,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const imageUrl = image_path
     ? imageConfig.getProductImageUrl(image_path)
-    : '/images/products/default.jpg';
+    : '/images/placeholder.jpg';
 
   const handleAddToCart = async () => {
-    if (currentQuantity <= 0 || isLoading) return;
+    if (currentQuantity <= 0 || isLoading || !inStock) return;
 
     setIsLoading(true);
     try {
-      await addToCart({
-        id,
-        name,
-        price,
-        image_path,
-        quantity: 1,
-      });
+      // Convert string id to number for inventory_id
+      const inventoryId = parseInt(id);
+      if (isNaN(inventoryId)) {
+        throw new Error('Invalid product ID');
+      }
+      
+      // Use addItem from CartContext
+      await addItem(inventoryId, 1);
 
       setCurrentQuantity(prev => prev - 1);
       setIsAdded(true);
@@ -64,6 +65,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       setIsLoading(false);
     }
   };
+
 
   return (
     <motion.div

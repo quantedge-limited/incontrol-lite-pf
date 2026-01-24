@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import { Menu, X, ShoppingCart } from "lucide-react";
-import { useCart } from "@/context/CartContext";
+import { useCart } from "@/context/cart/CartContext";
 import Link from "next/link";
 
 interface HeaderProps {
@@ -11,11 +11,11 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
-  const { items } = useCart();
+  const { cart } = useCart(); // Changed from 'items' to 'cart'
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Calculate total items from cart
-  const totalItems = items.reduce((total, item) => total + item.quantity, 0);
+  // Calculate total items from cart - with safe optional chaining
+  const totalItems = cart?.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
 
   return (
     <header className="sticky top-0 z-30 w-full bg-white shadow-md">
@@ -42,18 +42,18 @@ export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             >
               Products
             </a>
-            <a
+            <Link
               href="/about"
               className="text-gray-700 hover:text-[#0091AD] font-medium"
             >
               About
-            </a>
-            <a
+            </Link>
+            <Link
               href="/contact"
               className="text-gray-700 hover:text-[#0091AD] font-medium"
             >
               Contact
-            </a>
+            </Link>
           </nav>
 
           {/* Cart Button */}
@@ -89,27 +89,31 @@ export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
               <Link
                 href="/"
                 className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2 transition-colors border-none outline-none"
+                onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
               <a
                 href="#products"
                 className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2"
+                onClick={() => setIsMenuOpen(false)}
               >
                 Products
               </a>
-              <a
+              <Link
                 href="/about"
                 className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2"
+                onClick={() => setIsMenuOpen(false)}
               >
                 About
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/contact"
                 className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2"
+                onClick={() => setIsMenuOpen(false)}
               >
                 Contact
-              </a>
+              </Link>
             </div>
           </div>
         )}

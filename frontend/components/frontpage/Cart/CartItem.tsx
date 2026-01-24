@@ -1,4 +1,4 @@
-// components/frontpage/Cart/CartItem.tsx
+// components/frontpage/Cart/CartItem.tsx - FIXED
 'use client';
 
 import React, { useState } from 'react';
@@ -6,11 +6,12 @@ import { motion } from 'framer-motion';
 import { Plus, Minus, Trash2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
+// Use the CartItem interface from your CartContext
 interface CartItem {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image_path: string | null; // FIX: Changed from image to image_path
   quantity: number;
 }
 
@@ -22,12 +23,12 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
   const { updateQuantity, removeFromCart } = useCart();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleDecrease = async () => {
+  const handleDecrease = () => { // Remove async
     if (isUpdating || item.quantity <= 1) return;
     
     setIsUpdating(true);
     try {
-      await updateQuantity(item.id, item.quantity - 1);
+      updateQuantity(item.id, item.quantity - 1); // Remove await
     } catch (error) {
       console.error('Failed to update quantity:', error);
     } finally {
@@ -35,12 +36,12 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
     }
   };
 
-  const handleIncrease = async () => {
+  const handleIncrease = () => { // Remove async
     if (isUpdating) return;
     
     setIsUpdating(true);
     try {
-      await updateQuantity(item.id, item.quantity + 1);
+      updateQuantity(item.id, item.quantity + 1); // Remove await
     } catch (error) {
       console.error('Failed to update quantity:', error);
     } finally {
@@ -48,12 +49,12 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
     }
   };
 
-  const handleRemove = async () => {
+  const handleRemove = () => { // Remove async
     if (isUpdating) return;
     
     setIsUpdating(true);
     try {
-      await removeFromCart(item.id);
+      removeFromCart(item.id); // Remove await
     } catch (error) {
       console.error('Failed to remove item:', error);
     } finally {
@@ -72,11 +73,15 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
     >
       {/* Image */}
       <div className="w-20 h-20 rounded-lg shrink-0 flex items-center justify-center overflow-hidden">
-        {item.image && (item.image.startsWith('data:') || item.image.startsWith('http')) ? (
+        {/* FIX: Use image_path instead of image */}
+        {item.image_path ? (
           <img 
-            src={item.image} 
+            src={item.image_path.startsWith('http') ? item.image_path : `/images/products/${item.image_path}`} 
             alt={item.name} 
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = '/images/products/default-product.jpg';
+            }}
           />
         ) : (
           <div 
@@ -91,11 +96,10 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
       </div>
 
       {/* Details */}
-      <div className="flex-1 min-w-0"> {/* Added min-w-0 for text truncation */}
+      <div className="flex-1 min-w-0">
         <h4 className="font-bold text-gray-900 text-sm line-clamp-2">{item.name}</h4>
         <p className="text-gray-600 text-sm mt-1">KES {item.price.toFixed(0)} each</p>
         
-        {/* Total price for this item */}
         <p className="text-gray-900 font-bold text-sm mt-2">
           Total: KES {(item.price * item.quantity).toFixed(0)}
         </p>

@@ -1,3 +1,4 @@
+// app/admin/dashboard/pos/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,32 +9,19 @@ import POSLayout from '@/components/admin/pos/POSLayout';
 import CartSidebar from '@/components/admin/pos/CartSidebar';
 import InventoryGrid from '@/components/admin/pos/InventoryGrid';
 import CheckoutModal from '@/components/admin/pos/CheckoutModal';
-import { inventoryApi as ApiInventoryItem } from '@/lib/api/inventoryApi';
+import { inventoryApi } from '@/lib/api/inventoryApi';
+import { posApi } from '@/lib/api/sales';
 import type { InventoryItem } from '@/types/inventory';
-import { salesApi, CreateSaleDto } from '@/lib/api/salesApi';
 
 interface CartItem {
   id: string;
+  inventory_id: number;
   name: string;
   price: number;
   quantity: number;
   image?: string;
   image_url?: string;
   stock: number;
-  inventory_id: number;
-}
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  price_per_unit: number;
-  quantity: number;
-  image_path?: string;
-  image_url?: string;
-  sku?: string;
-  category?: string;
-  brand_name?: string;
-  is_active: boolean;
 }
 
 export default function POSPage() {
@@ -93,7 +81,7 @@ export default function POSPage() {
 
   const addToCart = (item: InventoryItem) => {
     setCart(prev => {
-      const existing = prev.find(cartItem => cartItem.id === item.id);
+      const existing = prev.find(cartItem => cartItem.inventory_id === parseInt(item.id));
       
       if (existing) {
         // Check stock
@@ -102,7 +90,7 @@ export default function POSPage() {
           return prev;
         }
         return prev.map(cartItem =>
-          cartItem.id === item.id
+          cartItem.inventory_id === parseInt(item.id)
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
@@ -176,23 +164,25 @@ export default function POSPage() {
     try {
       setCheckoutLoading(true);
       
-      // Prepare sale data according to your CreateSaleDto interface
-      const saleData: CreateSaleDto = {
+      // Prepare sale data for POS API
+      const saleData = {
         buyer_name: customerData.name,
         buyer_phone: customerData.phone,
         buyer_email: customerData.email,
-        buyer_address: customerData.address,
+        buyer_address: customerData.address || '', // Pass address here
         sale_type: 'walkin' as const,
         total_amount: calculateTotal(),
         notes: `Payment method: ${customerData.paymentMethod}. Walk-in sale.`,
+        payment_method: customerData.paymentMethod,
         items: cart.map(item => ({
-          inventory: item.id,
+          inventory: item.inventory_id,
           quantity: item.quantity,
           price_per_unit: item.price,
         })),
       };
 
-      await salesApi.create(saleData);
+      // Use the new POS API
+      await posApi.createSale(saleData);
       
       toast.success('Sale completed successfully!');
       clearCart();

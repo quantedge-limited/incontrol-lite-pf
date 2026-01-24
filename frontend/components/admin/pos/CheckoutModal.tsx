@@ -1,7 +1,8 @@
+// components/admin/pos/CheckoutModal.tsx
 "use client";
 
 import { motion } from 'framer-motion';
-import { X, CreditCard, Smartphone, Wallet, User, Phone, Mail } from 'lucide-react';
+import { X, CreditCard, Smartphone, Wallet, User, Phone, Mail, MapPin } from 'lucide-react'; // Added MapPin
 import { useState } from 'react';
 
 interface CartItem {
@@ -18,6 +19,7 @@ interface CheckoutModalProps {
     phone: string;
     email?: string;
     paymentMethod: string;
+    address?: string; // Make address optional
   }) => Promise<void>;
   loading: boolean;
   cart: CartItem[];
@@ -38,20 +40,18 @@ export default function CheckoutModal({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
+  const [customerAddress, setCustomerAddress] = useState(''); // Add this state
   const [paymentMethod, setPaymentMethod] = useState('cash');
 
-  // In CheckoutModal.tsx, update the form to include buyer_address for online sales
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // For walk-in sales, we can use store address or leave empty
     const customerData = {
       name: customerName,
       phone: customerPhone,
       email: customerEmail || undefined,
       paymentMethod,
-      // Optional: Add address for walk-in customers who want delivery
-      address: '', // You can add an address field if needed
+      address: customerAddress || '', // Now using the correct variable
     };
     
     await onCheckout(customerData);
@@ -125,7 +125,10 @@ export default function CheckoutModal({
             <div className="grid grid-cols-3 gap-3 mb-8">
               <button
                 type="button"
-                onClick={() => setCustomerName('Walk-in Customer')}
+                onClick={() => {
+                  setCustomerName('Walk-in Customer');
+                  setCustomerAddress('In-store pickup');
+                }}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
               >
                 Walk-in
@@ -135,6 +138,7 @@ export default function CheckoutModal({
                 onClick={() => {
                   setCustomerPhone('0712345678');
                   setCustomerName('Regular Customer');
+                  setCustomerAddress('123 Main Street, Nairobi');
                 }}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
               >
@@ -145,6 +149,7 @@ export default function CheckoutModal({
                 onClick={() => {
                   setCustomerEmail('corporate@example.com');
                   setCustomerName('Corporate');
+                  setCustomerAddress('Corporate Office, Westlands');
                 }}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
               >
@@ -193,6 +198,18 @@ export default function CheckoutModal({
                       placeholder="Email (Optional)"
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Address (Optional)"
+                      value={customerAddress}
+                      onChange={(e) => setCustomerAddress(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       disabled={loading}
                     />

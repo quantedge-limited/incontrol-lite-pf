@@ -17,7 +17,6 @@ import { motion } from "framer-motion";
 import SalesChart from "./SalesChart";
 import SalesFilters from "./SalesFilters";
 import SalesTable from "./SalesTable";
-import RecordSaleForm from "./RecordSaleForm";
 import { salesApi, SalesStats } from "@/lib/api/salesApi";
 import { inventoryApi } from "@/lib/api/inventoryApi";
 import { toast } from "react-toastify";
@@ -358,24 +357,6 @@ export default function SalesDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Form Column */}
-          <div className="lg:col-span-4 lg:order-2">
-            <div className="lg:sticky lg:top-8 bg-white rounded-2xl p-6 sm:p-8 shadow-md border border-gray-100">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
-                  <Plus size={20} />
-                </div>
-                <h4 className="text-lg font-bold text-gray-900">
-                  Record New Sale
-                </h4>
-              </div>
-              <RecordSaleForm 
-                onSave={addSale} 
-                inventoryItems={inventoryItems}
-                loading={loading}
-              />
-            </div>
-          </div>
 
           {/* Charts and Tables Column */}
           <div className="lg:col-span-8 lg:order-1 space-y-8">

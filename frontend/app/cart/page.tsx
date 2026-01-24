@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/context/cart/CartContext';
 import { useRouter } from 'next/navigation';
 
 export default function CartPage() {

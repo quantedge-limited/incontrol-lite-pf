@@ -1,4 +1,4 @@
-// app/admin/dashboard/pos/page.tsx
+// app/admin/dashboard/pos/page.tsx - with temporary fix
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -29,7 +29,6 @@ export default function POSPage() {
   const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -40,25 +39,19 @@ export default function POSPage() {
     loadInventory();
   }, []);
 
-  // Filter inventory based on search and category
+  // Filter inventory based on name only
   useEffect(() => {
-    let filtered = inventory;
-    
-    if (searchTerm) {
-      filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.brand_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+    if (!searchTerm.trim()) {
+      setFilteredInventory(inventory);
+      return;
     }
     
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(item => item.category === selectedCategory);
-    }
+    const filtered = inventory.filter(item =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
     
     setFilteredInventory(filtered);
-  }, [searchTerm, selectedCategory, inventory]);
+  }, [searchTerm, inventory]);
 
   const loadInventory = async () => {
     try {
@@ -76,8 +69,19 @@ export default function POSPage() {
     }
   };
 
-  // Get unique categories for filter
-  const categories = ['all', ...new Set(inventory.map(item => item.category).filter(Boolean))];
+  // Helper to get image from inventory item
+  const getItemImage = (item: InventoryItem): string | undefined => {
+    // Check all possible image fields
+    const imageFields = ['image_url', 'image', 'image_path', 'thumbnail_url'];
+    
+    for (const field of imageFields) {
+      if (field in item && item[field as keyof InventoryItem]) {
+        return item[field as keyof InventoryItem] as string;
+      }
+    }
+    
+    return undefined;
+  };
 
   const addToCart = (item: InventoryItem) => {
     setCart(prev => {
@@ -102,14 +106,16 @@ export default function POSPage() {
         return prev;
       }
       
+      const itemImage = getItemImage(item);
+      
       return [...prev, {
         id: item.id,
         inventory_id: parseInt(item.id),
         name: item.name,
         price: item.price_per_unit,
         quantity: 1,
-        image: item.image_path,
-        image_url: item.image_url,
+        image: itemImage,
+        image_url: itemImage,
         stock: item.quantity
       }];
     });
@@ -164,16 +170,25 @@ export default function POSPage() {
     try {
       setCheckoutLoading(true);
       
+      // Convert payment method to the correct type
+      let paymentMethod: 'mpesa' | 'cash' = 'cash';
+      
+      if (customerData.paymentMethod.toLowerCase() === 'mpesa') {
+        paymentMethod = 'mpesa';
+      } else if (customerData.paymentMethod.toLowerCase() === 'cash') {
+        paymentMethod = 'cash';
+      }
+
       // Prepare sale data for POS API
       const saleData = {
         buyer_name: customerData.name,
         buyer_phone: customerData.phone,
         buyer_email: customerData.email,
-        buyer_address: customerData.address || '', // Pass address here
+        buyer_address: customerData.address || '',
         sale_type: 'walkin' as const,
         total_amount: calculateTotal(),
-        notes: `Payment method: ${customerData.paymentMethod}. Walk-in sale.`,
-        payment_method: customerData.paymentMethod,
+        notes: `Payment method: ${paymentMethod}. Walk-in sale.`,
+        payment_method: paymentMethod,
         items: cart.map(item => ({
           inventory: item.inventory_id,
           quantity: item.quantity,
@@ -212,11 +227,12 @@ export default function POSPage() {
         checkoutDisabled={cart.length === 0}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
-        categories={categories}
         onRefresh={loadInventory}
         filteredProducts={filteredInventory}
+        // Temporary fix - add these props with default values
+        selectedCategory="all"
+        onCategoryChange={() => {}} // Empty function
+        categories={[]} // Empty array
       >
         <InventoryGrid
           inventory={filteredInventory}

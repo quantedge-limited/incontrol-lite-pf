@@ -3,6 +3,8 @@
 
 import { PosProvider } from '@/context/pos/PosContext';
 
+
+
 export default function POSLayout({
   children,
 }: {

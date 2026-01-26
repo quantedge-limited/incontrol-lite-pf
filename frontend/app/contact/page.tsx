@@ -7,7 +7,6 @@ import {Footer} from '@/components/frontpage/Footer/Footer';
 export default function Page() {
   return (
     <>
-      <Header onCartClick={() => {}} />
       <Contact />
       <Footer />
     </>

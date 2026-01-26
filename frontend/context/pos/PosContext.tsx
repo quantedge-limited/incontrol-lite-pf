@@ -9,6 +9,13 @@ interface PosContextType {
   loading: boolean;
   error: string | null;
   selectedSale: Sale | null;
+  // Optional: Add pagination info if you need it
+  pagination?: {
+    total: number;
+    page: number;
+    page_size: number;
+    pages: number;
+  };
   
   fetchSales: (params?: any) => Promise<void>;
   createSale: (data: any) => Promise<Sale>;
@@ -23,13 +30,27 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [pagination, setPagination] = useState<{
+    total: number;
+    page: number;
+    page_size: number;
+    pages: number;
+  } | null>(null);
 
   const fetchSales = useCallback(async (params?: any) => {
     setLoading(true);
     setError(null);
     try {
       const data = await posApi.getSales(params);
-      setSales(data);
+      // Extract just the sales array from the response
+      setSales(data.sales);
+      // Store pagination data if needed
+      setPagination({
+        total: data.total,
+        page: data.page,
+        page_size: data.page_size,
+        pages: data.pages,
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -79,6 +100,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
       loading,
       error,
       selectedSale,
+      pagination: pagination || undefined,
       fetchSales,
       createSale,
       cancelSale,

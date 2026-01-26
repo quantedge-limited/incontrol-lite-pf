@@ -52,4 +52,17 @@ export interface InventoryStats {
   lowStockItems: number;
   recentAdditions: number;
 }
+
+export interface Product {
+  id: string;
+  name: string;
+  description?: string; // Add this
+  brand?: string;
+  supplier?: string;
+  price: number;
+  quantity: number;
+  dateAdded: string;
+}
+
+
 export const STORAGE_KEY = 'incontrol_inventory_products_v1';

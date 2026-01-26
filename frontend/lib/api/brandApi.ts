@@ -1,5 +1,4 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
 import { authApi } from './authApi';
 
@@ -23,12 +22,11 @@ export const brandApi = {
 
   // Create brand
   async create(name: string, description?: string): Promise<Brand> {
-    const res = await fetch(`${API_BASE}/inventory/brands/create/`, { // match backend
+    const res = await fetch(`${API_BASE}/inventory/brands/create/`, {
       method: 'POST',
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // Already includes Content-Type
       body: JSON.stringify({ name, description }),
     });
-
 
     if (!res.ok) {
       const error = await res.json();
@@ -42,9 +40,7 @@ export const brandApi = {
   async update(id: string, data: Partial<Brand>): Promise<Brand> {
     const res = await fetch(`${API_BASE}/inventory/brand/${id}/update/`, {
       method: 'PUT',
-      headers: authApi.getAuthHeaders({
-        'Content-Type': 'application/json',
-      }),
+      headers: authApi.getAuthHeaders(), // Already includes Content-Type
       body: JSON.stringify(data),
     });
 

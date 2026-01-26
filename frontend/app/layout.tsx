@@ -1,4 +1,4 @@
-// app/layout.tsx
+// app/layout.tsx - UPDATED
 "use client";
 
 import { Inter } from 'next/font/google';
@@ -7,6 +7,7 @@ import { CartProvider } from '@/context/cart/CartContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Header } from '@/components/frontpage/Header/Header';
+import { useRouter } from 'next/navigation'; // Add this
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -15,12 +16,18 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  
+  const handleCartClick = () => {
+    router.push('/cart');
+  };
+
   return (
     <html lang="en">
       <body className={inter.className}>
         <CartProvider>
           <ToastContainer position="top-right" autoClose={3000} />
-          <Header />
+          <Header onCartClick={handleCartClick} /> {/* Pass the prop */}
           <main>{children}</main>
         </CartProvider>
       </body>

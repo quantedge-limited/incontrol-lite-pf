@@ -35,7 +35,7 @@ export const productApi = {
   async create(productData: ProductFormData): Promise<Product> {
     const res = await fetch(`${API_BASE}/inventory/create/`, {
       method: 'POST',
-      headers: authApi.getAuthHeaders({ 'Content-Type': 'application/json' }),
+      headers: authApi.getAuthHeaders(), // No arguments needed
       body: JSON.stringify({
         ...productData,
         price_per_unit: productData.price,
@@ -55,7 +55,7 @@ export const productApi = {
   // List all products
   async list(): Promise<Product[]> {
     const res = await fetch(`${API_BASE}/inventory/`, {
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments needed
     });
 
     if (!res.ok) {
@@ -85,7 +85,7 @@ export const productApi = {
   async update(id: string, productData: Partial<ProductFormData>): Promise<Product> {
     const res = await fetch(`${API_BASE}/inventory/${id}/update/`, {
       method: 'PUT',
-      headers: authApi.getAuthHeaders({ 'Content-Type': 'application/json' }),
+      headers: authApi.getAuthHeaders(), // No arguments needed
       body: JSON.stringify({
         ...productData,
         price_per_unit: productData.price,
@@ -106,7 +106,7 @@ export const productApi = {
   async delete(id: string): Promise<void> {
     const res = await fetch(`${API_BASE}/inventory/${id}/delete/`, {
       method: 'DELETE',
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments needed
     });
 
     if (!res.ok) {

@@ -21,6 +21,7 @@ export interface CheckoutData {
   buyer_email: string;
   buyer_phone: string;
   buyer_address: string;
+  lastName?: string; // Add this field if needed
   items: Array<{
     product_id: number;
     quantity: number;
@@ -106,6 +107,11 @@ export const publicApiService = {
 
   // Checkout
   async checkout(data: CheckoutData): Promise<OrderResponse> {
+    // Fix: Only include lastName if it exists
+    const buyer_name = data.lastName 
+      ? `${data.buyer_name} ${data.lastName}`.trim()
+      : data.buyer_name;
+
     const response = await fetch(`${API_BASE}/sales/public/checkout/`, {
       method: 'POST',
       headers: {
@@ -113,7 +119,7 @@ export const publicApiService = {
       },
       credentials: 'include',
       body: JSON.stringify({
-        buyer_name: `${data.buyer_name} ${data.lastName || ''}`.trim(),
+        buyer_name: buyer_name,
         buyer_email: data.buyer_email,
         buyer_phone: data.buyer_phone,
         buyer_address: data.buyer_address,

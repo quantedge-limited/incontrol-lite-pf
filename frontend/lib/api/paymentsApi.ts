@@ -1,5 +1,7 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
+import { authApi } from './authApi'; // Add this import
+
 export interface Payment {
   id: string;
   sale: {
@@ -38,15 +40,14 @@ async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  // Use authApi.getAuthHeaders() for consistent authentication
+  const authHeaders = authApi.getAuthHeaders();
+  
+  // Merge headers properly
   const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+    ...authHeaders,
     ...options.headers,
   };
-
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,

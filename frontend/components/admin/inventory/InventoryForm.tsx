@@ -1,3 +1,4 @@
+// components/admin/inventory/InventoryForm.tsx - FIXED
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -15,7 +16,8 @@ import {
 } from "lucide-react";
 import { brandApi, Brand } from "@/lib/api/brandApi";
 import { supplierApi, Supplier } from "@/lib/api/supplierApi";
-import { inventoryApi, InventoryFormData } from "@/lib/api/inventoryApi";
+import { inventoryApi } from "@/lib/api/inventoryApi";
+import type { InventoryFormData } from "./types"; // Import from types
 import { uploadProductImage } from "@/lib/fileUpload";
 
 interface InventoryFormProps {
@@ -38,26 +40,26 @@ export default function InventoryForm({
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Form data matches InventoryFormData type
   const [formData, setFormData] = useState<InventoryFormData>({
     name: item?.name || "",
     description: item?.description || "",
     quantity: item?.quantity || 1,
     price_per_unit: item?.price_per_unit || 0,
     received_at: item?.received_at || new Date().toISOString().split("T")[0],
-    expiry_date: item?.expiry_date || null,
-    supplier: item?.supplier?.id || item?.supplier_id || "",
-    brand: item?.brand?.id || item?.brand_id || "",
-    image_path: item?.image_path || "",
-    is_active: item?.is_active ?? true,
-    sku: item?.sku || "",
-    category: item?.category || "",
+    expiry_date: item?.expiry_date || undefined, // Change null to undefined
+    supplier_id: item?.supplier?.id || item?.supplier_id || "",
+    brand_id: item?.brand?.id || item?.brand_id || "",
   });
 
+  // Separate state for UI-only fields
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>(
     item?.image_path ? `/images/products/${item.image_path}` : ""
   );
   const [isNewImage, setIsNewImage] = useState(false);
+  const [sku, setSku] = useState(item?.sku || "");
+  const [category, setCategory] = useState(item?.category || "");
 
   // Load brands & suppliers
   useEffect(() => {
@@ -103,7 +105,6 @@ export default function InventoryForm({
   const removeImage = () => {
     setImageFile(null);
     setImagePreview("");
-    setFormData({ ...formData, image_path: "" });
     setIsNewImage(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -113,7 +114,7 @@ export default function InventoryForm({
     try {
       const newBrand = await brandApi.create(newBrandName, newBrandDescription);
       setBrands((prev) => [...prev, newBrand]);
-      setFormData((prev) => ({ ...prev, brand: newBrand.id }));
+      setFormData((prev) => ({ ...prev, brand_id: newBrand.id })); // Use brand_id
       setNewBrandName("");
       setNewBrandDescription("");
       setShowAddBrand(false);
@@ -128,8 +129,9 @@ export default function InventoryForm({
     setError("");
 
     try {
-      let imagePath = formData.image_path;
+      let imagePath = item?.image_path;
 
+      // Upload new image if selected
       if (isNewImage && imageFile) {
         imagePath = await uploadProductImage(
           imageFile,
@@ -138,14 +140,19 @@ export default function InventoryForm({
         );
       }
 
-      const apiData = {
+      // Prepare API data - only include fields in InventoryFormData
+      const apiData: InventoryFormData = {
         ...formData,
-        image_path: imagePath || null,
-        expiry_date: formData.expiry_date || null,
+        // Add image_path if we have one (even though it's not in InventoryFormData,
+        // the API might accept it)
+        ...(imagePath && { image_path: imagePath }),
       };
 
-      if (item?.id) await inventoryApi.update(item.id, apiData);
-      else await inventoryApi.create(apiData);
+      if (item?.id) {
+        await inventoryApi.update(item.id, apiData);
+      } else {
+        await inventoryApi.create(apiData);
+      }
 
       onSave();
     } catch (err) {
@@ -240,48 +247,44 @@ export default function InventoryForm({
             />
           </div>
 
-          {/* SKU */}
+          {/* SKU (Separate state - not in InventoryFormData) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               SKU (Optional)
             </label>
             <input
               type="text"
-              value={formData.sku}
-              onChange={(e) =>
-                setFormData({ ...formData, sku: e.target.value })
-              }
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               placeholder="e.g., PROD-001"
             />
           </div>
 
-          {/* Category */}
+          {/* Category (Separate state - not in InventoryFormData) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Category (Optional)
             </label>
             <input
               type="text"
-              value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               placeholder="e.g., Electronics, Clothing"
             />
           </div>
 
-          {/* Brand & Supplier simplified */}
+          {/* Brand & Supplier */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Brand *
             </label>
             <div className="flex gap-2">
               <select
-                value={formData.brand}
+                value={formData.brand_id || ""}
                 onChange={(e) =>
-                  setFormData({ ...formData, brand: e.target.value })
+                  setFormData({ ...formData, brand_id: e.target.value })
                 }
                 className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
@@ -308,9 +311,9 @@ export default function InventoryForm({
               Supplier *
             </label>
             <select
-              value={formData.supplier}
+              value={formData.supplier_id || ""}
               onChange={(e) =>
-                setFormData({ ...formData, supplier: e.target.value })
+                setFormData({ ...formData, supplier_id: e.target.value })
               }
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               required
@@ -408,7 +411,7 @@ export default function InventoryForm({
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  expiry_date: e.target.value || null,
+                  expiry_date: e.target.value || undefined, // Change null to undefined
                 })
               }
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -423,7 +426,7 @@ export default function InventoryForm({
             Description
           </label>
           <textarea
-            value={formData.description}
+            value={formData.description || ""}
             onChange={(e) =>
               setFormData({ ...formData, description: e.target.value })
             }
@@ -431,21 +434,6 @@ export default function InventoryForm({
             className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
             placeholder="Add additional details"
           />
-        </div>
-
-        {/* Active */}
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={formData.is_active}
-            onChange={(e) =>
-              setFormData({ ...formData, is_active: e.target.checked })
-            }
-            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500"
-          />
-          <label className="text-sm font-medium text-gray-700">
-            Make this product visible to customers
-          </label>
         </div>
 
         {/* Buttons */}

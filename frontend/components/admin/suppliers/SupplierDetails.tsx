@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Supplier, Purchase } from './types';
 import { supplierApi } from '@/lib/api/supplierApi';
-import { purchaseApi } from '@/lib/api/purchaseApi'; // You'll need to create this
+//import { purchaseApi } from '@/lib/api/purchaseApi'; // You'll need to create this
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, 

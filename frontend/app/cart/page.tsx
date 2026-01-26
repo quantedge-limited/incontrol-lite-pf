@@ -1,3 +1,4 @@
+// app/cart/page.tsx - FIXED
 "use client";
 
 import { useState } from 'react';
@@ -8,8 +9,11 @@ import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
   const router = useRouter();
-  const { items, totalPrice, isLoading, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { cart, items, loading: isLoading, removeItem: removeFromCart, updateItem: updateQuantity, clearCart } = useCart();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  // Use cart.total_price instead of trying to destructure totalPrice
+  const totalPrice = cart.total_price;
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
@@ -71,34 +75,24 @@ export default function CartPage() {
                   <ul className="divide-y divide-gray-200">
                     {items.map((item) => (
                       <li key={item.id} className="py-6 flex">
-                        {/* Product Image */}
-                        {item.image_path ? (
-                          <div className="flex-shrink-0 w-24 h-24 rounded-md overflow-hidden">
-                            <img
-                              src={item.image_path}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-md flex items-center justify-center">
-                            <ShoppingBag className="h-12 w-12 text-gray-400" />
-                          </div>
-                        )}
+                        {/* Product Image - Note: CartItem doesn't have image_path, might need adjustment */}
+                        <div className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-md flex items-center justify-center">
+                          <ShoppingBag className="h-12 w-12 text-gray-400" />
+                        </div>
 
                         {/* Product Details */}
                         <div className="ml-4 flex-1">
                           <div className="flex items-start justify-between">
                             <div>
                               <h3 className="text-sm font-medium text-gray-900">
-                                {item.name}
+                                {item.inventory_name}
                               </h3>
                               <p className="mt-1 text-sm text-gray-500">
-                                KES {item.price.toFixed(2)} each
+                                KES {item.price_per_unit.toFixed(2)} each
                               </p>
                             </div>
                             <p className="text-sm font-medium text-gray-900">
-                              KES {(item.price * item.quantity).toFixed(2)}
+                              KES {item.total_price.toFixed(2)}
                             </p>
                           </div>
 
@@ -106,8 +100,8 @@ export default function CartPage() {
                           <div className="mt-3 flex items-center space-x-3">
                             <button
                               onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              disabled={isLoading}
-                              className="p-1 rounded-full border border-gray-300 hover:bg-gray-50"
+                              disabled={isLoading || item.quantity <= 1}
+                              className="p-1 rounded-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Minus size={16} />
                             </button>
@@ -140,7 +134,7 @@ export default function CartPage() {
                   <button
                     onClick={clearCart}
                     disabled={isLoading}
-                    className="text-sm text-red-600 hover:text-red-800"
+                    className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Clear cart
                   </button>

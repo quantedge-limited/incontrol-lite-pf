@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { ShoppingCart, Check } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
-import { toast } from 'react-toastify';
+import { useCart } from '@/context/cart/CartContext';
 
 interface AddToCartButtonProps {
-  productId: number;
+  productId: number; // This should be inventoryId based on your context
   productName: string;
   price: number;
   imagePath?: string | null;
@@ -22,18 +21,13 @@ export default function AddToCartButton({
   className = '',
   showLabel = true,
 }: AddToCartButtonProps) {
-  const { addToCart, isLoading } = useCart();
+  const { addItem, loading } = useCart(); // Changed from addToCart to addItem, isLoading to loading
   const [added, setAdded] = useState(false);
 
   const handleAddToCart = async () => {
     try {
-      await addToCart({
-        id: productId.toString(),
-        name: productName,
-        price,
-        image_path: imagePath,
-        productId,
-      });
+      // Use addItem from context with inventoryId
+      await addItem(productId, 1); // Default quantity to 1
       
       setAdded(true);
       
@@ -41,6 +35,7 @@ export default function AddToCartButton({
       setTimeout(() => setAdded(false), 2000);
     } catch (error) {
       // Error is already handled in context
+      console.error('Failed to add to cart:', error);
     }
   };
 
@@ -59,7 +54,7 @@ export default function AddToCartButton({
   return (
     <button
       onClick={handleAddToCart}
-      disabled={isLoading}
+      disabled={loading}
       className={buttonClasses}
     >
       {added ? (

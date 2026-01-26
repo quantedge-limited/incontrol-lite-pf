@@ -4,14 +4,14 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Minus, Trash2 } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/context/cart/CartContext';
 
 // Use the CartItem interface from your CartContext
 interface CartItem {
   id: string;
   name: string;
   price: number;
-  image_path: string | null; // FIX: Changed from image to image_path
+  image_path: string | null;
   quantity: number;
 }
 
@@ -20,15 +20,15 @@ interface CartItemComponentProps {
 }
 
 export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) => {
-  const { updateQuantity, removeFromCart } = useCart();
+  const { updateItem, removeItem } = useCart(); // Changed from updateQuantity to updateItem
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleDecrease = () => { // Remove async
+  const handleDecrease = () => {
     if (isUpdating || item.quantity <= 1) return;
     
     setIsUpdating(true);
     try {
-      updateQuantity(item.id, item.quantity - 1); // Remove await
+      updateItem(item.id, item.quantity - 1); // Changed from updateQuantity to updateItem
     } catch (error) {
       console.error('Failed to update quantity:', error);
     } finally {
@@ -36,12 +36,12 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
     }
   };
 
-  const handleIncrease = () => { // Remove async
+  const handleIncrease = () => {
     if (isUpdating) return;
     
     setIsUpdating(true);
     try {
-      updateQuantity(item.id, item.quantity + 1); // Remove await
+      updateItem(item.id, item.quantity + 1); // Changed from updateQuantity to updateItem
     } catch (error) {
       console.error('Failed to update quantity:', error);
     } finally {
@@ -49,12 +49,12 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
     }
   };
 
-  const handleRemove = () => { // Remove async
+  const handleRemove = () => {
     if (isUpdating) return;
     
     setIsUpdating(true);
     try {
-      removeFromCart(item.id); // Remove await
+      removeItem(item.id); // Changed from removeFromCart to removeItem
     } catch (error) {
       console.error('Failed to remove item:', error);
     } finally {
@@ -73,7 +73,6 @@ export const CartItemComponent: React.FC<CartItemComponentProps> = ({ item }) =>
     >
       {/* Image */}
       <div className="w-20 h-20 rounded-lg shrink-0 flex items-center justify-center overflow-hidden">
-        {/* FIX: Use image_path instead of image */}
         {item.image_path ? (
           <img 
             src={item.image_path.startsWith('http') ? item.image_path : `/images/products/${item.image_path}`} 

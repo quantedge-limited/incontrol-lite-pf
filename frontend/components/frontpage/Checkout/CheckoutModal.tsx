@@ -26,7 +26,7 @@ interface FormData {
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
-  const { items, totalPrice, clearCart, syncCartWithBackend } = useCart();
+  const { cart, items, clearCart } = useCart();
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
@@ -173,7 +173,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
         // Mock order creation (replace with real API later)
         const mockOrderResponse = {
           order_id: `ORD-${Date.now()}`,
-          total_amount: totalPrice,
+          total_amount: cart.total_price,
           message: 'Order created successfully',
           customer: {
             name: formData.firstName + ' ' + formData.lastName,
@@ -278,7 +278,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                 {orderData && (
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">
-                      Order #{orderData.order_id?.slice(0, 8)} • Total: KES {totalPrice.toFixed(0)}
+                      Order #{orderData.order_id?.slice(0, 8)} • Total: KES {cart.total_price.toFixed(0)}
                     </p>
                   </div>
                 )}
@@ -297,7 +297,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                   Please check your phone to complete the M-Pesa payment.
                 </p>
                 <p className="text-sm text-gray-500 mb-6">
-                  Order #{orderData?.order_id?.slice(0, 8)} • KES {totalPrice.toFixed(0)}
+                  Order #{orderData?.order_id?.slice(0, 8)} • KES {cart.total_price.toFixed(0)}
                 </p>
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-6">
                   <p className="text-sm text-yellow-700">
@@ -414,7 +414,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                             </div>
                             <div className="flex justify-between font-bold">
                               <span>Total:</span>
-                              <span>KES {totalPrice.toFixed(0)}</span>
+                              <span>KES {cart.total_price.toFixed(0)}</span>
                             </div>
                           </div>
                         </div>

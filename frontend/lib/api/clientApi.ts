@@ -19,7 +19,7 @@ export const clientApi = {
   async list(): Promise<Client[]> {
     const res = await fetch(`${API_BASE}/staff/clients/`, {
       method: 'GET', // Explicitly set GET method
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: 'Failed to fetch clients' }));
@@ -32,7 +32,7 @@ export const clientApi = {
   async get(id: string): Promise<Client> {
     const res = await fetch(`${API_BASE}/staff/clients/${id}/`, {
       method: 'GET',
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: 'Failed to fetch client' }));
@@ -52,9 +52,7 @@ export const clientApi = {
 
     const res = await fetch(`${API_BASE}/staff/clients/create/`, {
       method: 'POST',
-      headers: authApi.getAuthHeaders({
-        'Content-Type': 'application/json',
-      }),
+      headers: authApi.getAuthHeaders(), // No arguments - it already includes Content-Type
       body: JSON.stringify(mappedData),
     });
 
@@ -82,9 +80,7 @@ export const clientApi = {
 
     const res = await fetch(`${API_BASE}/staff/clients/${id}/update/`, {
       method: 'PUT',
-      headers: authApi.getAuthHeaders({
-        'Content-Type': 'application/json',
-      }),
+      headers: authApi.getAuthHeaders(), // No arguments - it already includes Content-Type
       body: JSON.stringify(mappedData),
     });
 
@@ -105,7 +101,7 @@ export const clientApi = {
   async delete(id: string): Promise<void> {
     const res = await fetch(`${API_BASE}/staff/clients/${id}/delete/`, {
       method: 'DELETE',
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments
     });
 
     if (!res.ok) {
@@ -119,7 +115,7 @@ export const clientApi = {
   async search(query: string): Promise<Client[]> {
     // Check if search endpoint exists first
     const res = await fetch(`${API_BASE}/staff/clients/search/?q=${encodeURIComponent(query)}`, {
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments
     });
     
     if (!res.ok) {

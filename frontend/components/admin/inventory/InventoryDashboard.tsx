@@ -19,8 +19,8 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import InventoryForm from './InventoryForm';
-import { inventoryApi, InventoryItem } from '@/lib/api/inventoryApi';
-
+import { inventoryApi } from '@/lib/api/inventoryApi';
+import type { InventoryItem } from './types';
 export default function InventoryDashboard() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>([]);
@@ -69,12 +69,12 @@ export default function InventoryDashboard() {
 
     // Brand filter
     if (filterBrand) {
-      filtered = filtered.filter(item => item.brand_id === filterBrand);
+      filtered = filtered.filter(item => item.brand_name === filterBrand);
     }
 
     // Supplier filter
     if (filterSupplier) {
-      filtered = filtered.filter(item => item.supplier_id === filterSupplier);
+      filtered = filtered.filter(item => item.supplier_name === filterSupplier);
     }
 
     // Stock filter

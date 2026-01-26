@@ -42,11 +42,12 @@ export default function OverviewDashboard() {
       if (raw) {
         const data = JSON.parse(raw);
         // Use mock data structure
+        // In your OverviewDashboard.tsx, update the fallback data:
         setSalesStats({
           total_revenue: data.revenue || 0,
           recent_revenue: data.mtd || 0,
           total_sales: data.totalSales || 0,
-          recent_sales: 0,
+          recent_sales: [], // Change from [] to 0
           avg_order_value: 0,
           monthly_trend: [],
           total_profit: data.profit || 0,
@@ -54,7 +55,7 @@ export default function OverviewDashboard() {
           top_products: [],
           low_stock_items: 0,
           out_of_stock_items: 0,
-          recent_sales: []
+          // Remove: recent_sales: [] // Remove this line
         });
         
         const last6 = data.last6months || { months: [], totals: [] };
@@ -174,7 +175,7 @@ export default function OverviewDashboard() {
         <Link href="/admin/dashboard/sales" className="block p-4 bg-white border rounded shadow hover:shadow-md">
           <div className="text-sm font-medium text-emerald-700">Sales</div>
           <div className="mt-2 text-lg font-semibold text-emerald-900">
-            {salesStats ? `${salesStats.recent_sales} recent` : 'View performance'}
+            {salesStats ? `${salesStats.recent_sales.length} recent` : 'View performance'}
           </div>
         </Link>
 

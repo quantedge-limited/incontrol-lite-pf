@@ -1,25 +1,13 @@
+// components/admin/pos/InventoryGrid.tsx - FIXED
 "use client";
 
 import { motion } from 'framer-motion';
 import { ShoppingBag, Package, Tag } from 'lucide-react';
-import Image from 'next/image';
-import type { InventoryItem } from '@/types/inventory';
+import type { InventoryItem } from '@/lib/api/inventoryApi'; // Already imported
 
-
-interface InventoryItem {
-  id: string;
-  name: string;
-  price_per_unit: number;
-  quantity: number;
-  image_path?: string;
-  image_url?: string; // Use this for display
-  sku?: string;
-  category?: string;
-  brand_name?: string;
-}
 
 interface InventoryGridProps {
-  inventory: InventoryItem[];
+  inventory: InventoryItem[]; // Now uses the imported type
   loading: boolean;
   onAddToCart: (item: InventoryItem) => void;
 }

@@ -12,6 +12,48 @@ function authHeaders(extra: HeadersInit = {}): HeadersInit {
   };
 }
 
+
+export interface InventoryFormData {
+  name: string;
+  description?: string;
+  quantity: number;
+  price_per_unit: number;
+  received_at: string;
+  expiry_date?: string;
+  supplier_id?: string;
+  brand_id?: string;
+  sku?: string;
+  category?: string;
+  image_url?: string;
+  image_path?: string;
+}
+
+// Also export InventoryItem if not already
+export interface InventoryItem {
+  id: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  price_per_unit: number;
+  total_value: number;
+  received_at: string;
+  expiry_date?: string;
+  supplier_id?: string;
+  supplier_name?: string;
+  brand_id?: string;
+  brand_name?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  image_url?: string;
+  image_path?: string;
+  image?: string;
+  sku?: string;
+  category?: string;
+}
+
+
+
 export const inventoryApi = {
   async create(itemData: InventoryFormData): Promise<InventoryItem> {
     const res = await fetch(`${API_BASE}/inventory/create/`, {

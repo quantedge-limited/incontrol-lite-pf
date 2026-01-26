@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { ClientFormData } from './types';
+import { ClientFormData, Client } from './types';
 import { clientApi } from '@/lib/api/clientApi';
+
+
 
 interface ClientFormProps {
   onSave: () => void; // Callback to refresh list

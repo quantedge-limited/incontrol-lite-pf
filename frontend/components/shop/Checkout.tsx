@@ -2,36 +2,46 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { cartApi, CheckoutDto } from "@/lib/api/sales";
+import { checkoutApi } from "@/lib/api/sales";
 import { toast } from "react-hot-toast";
 
 export default function Checkout() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<CheckoutDto>({
+  const [formData, setFormData] = useState({
     buyer_name: "",
     buyer_email: "",
     buyer_phone: "",
     buyer_address: "",
-    sale_type: "online",
     notes: "",
+    payment_method: "mpesa" as const, // Add payment_method
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form
+    if (!formData.buyer_name.trim() || 
+        !formData.buyer_email.trim() || 
+        !formData.buyer_phone.trim() || 
+        !formData.buyer_address.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+    
     setLoading(true);
 
     try {
-      const response = await cartApi.checkout(formData);
-      if (response.data) {
+      const response = await checkoutApi.checkout(formData);
+      if (response.success) {
         toast.success("Order created successfully!");
-        // Redirect to payment or order confirmation
-        router.push(`/order/${response.data.id}`);
+        // Redirect to order confirmation
+        router.push(`/order/${response.order_id}`);
       } else {
-        toast.error(`Checkout failed: ${response.error}`);
+        toast.error(`Checkout failed: ${response.message}`);
       }
-    } catch (error) {
-      toast.error("Checkout failed");
+    } catch (error: any) {
+      toast.error(error.message || "Checkout failed");
       console.error(error);
     } finally {
       setLoading(false);
@@ -127,14 +137,37 @@ export default function Checkout() {
             />
           </div>
 
+          <div className="bg-blue-50 p-4 rounded-md">
+            <div className="flex items-center gap-3">
+              <input
+                type="radio"
+                id="mpesa"
+                name="payment_method"
+                value="mpesa"
+                checked={formData.payment_method === "mpesa"}
+                onChange={() => setFormData(prev => ({ ...prev, payment_method: "mpesa" }))}
+                className="h-4 w-4 text-emerald-600"
+              />
+              <label htmlFor="mpesa" className="text-sm font-medium text-gray-700">
+                Pay with M-Pesa
+              </label>
+            </div>
+            <p className="text-sm text-gray-600 ml-7 mt-1">
+              You will receive an M-Pesa prompt to complete payment
+            </p>
+          </div>
+
           <div className="pt-6 border-t border-gray-200">
             <button
               type="submit"
               disabled={loading}
               className="w-full bg-emerald-600 text-white py-3 px-4 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Processing..." : "Place Order"}
+              {loading ? "Processing..." : "Place Order & Pay"}
             </button>
+            <p className="text-sm text-gray-500 text-center mt-3">
+              By placing your order, you agree to our Terms of Service
+            </p>
           </div>
         </form>
       </div>

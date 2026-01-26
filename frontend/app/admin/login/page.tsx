@@ -2,17 +2,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-/**
- * AdminAuthPage Component
- * Connected to Django backend OTP authentication
- */
 export default function AdminAuthPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const [redirectParam, setRedirectParam] = useState<string>('/admin/dashboard/sales');
   
   // API base URL
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
@@ -23,6 +19,15 @@ export default function AdminAuthPage() {
   const [email, setEmail] = useState<string>('');
   const [otp, setOtp] = useState<string>('');
 
+  // Get redirect param from URL on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get('redirect') || '/admin/dashboard/sales';
+      setRedirectParam(redirect);
+    }
+  }, []);
+
   // Check if user is already logged in
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -30,10 +35,9 @@ export default function AdminAuthPage() {
     
     if (token && adminEmail) {
       // Already logged in, redirect to intended page or dashboard
-      const redirect = searchParams.get('redirect') || '/admin/dashboard/sales';
-      router.push(redirect);
+      router.push(redirectParam);
     }
-  }, [router, searchParams]);
+  }, [router, redirectParam]);
 
   /**
    * Step 1: Request OTP from backend
@@ -128,23 +132,10 @@ export default function AdminAuthPage() {
 
         toast.success("Login successful! Redirecting...");
 
-        // Get redirect URL from query params or use default
-        const redirect =
-          searchParams.get('redirect') ?? '/admin/dashboard/sales';
-
-        toast.success("Login successful! Redirecting...");
-
         setTimeout(() => {
-          window.location.href = redirect;
+          window.location.href = redirectParam;
         }, 800);
 
-
-        // Use window.location for a hard redirect (ensures cookies are sent)
-        //setTimeout(() => {
-        //  console.log('Redirecting to:', redirect);
-        //  window.location.href = redirect;
-        //}, 1000);
-        
       } else {
         toast.error(data.detail || "Invalid OTP");
       }
@@ -286,14 +277,6 @@ export default function AdminAuthPage() {
                 Clear & Start Over
               </button>
             </div>
-
-            {/* Development mode hint */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-                <p className="font-medium mb-1">Development Hint:</p>
-                <p>Check Django console for generated OTP after requesting.</p>
-              </div>
-            )}
           </form>
         )}
 

@@ -1,4 +1,3 @@
-// context/CartContext.tsx
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -13,6 +12,9 @@ export interface CartItem {
   quantity: number;
   price_per_unit: number;
   total_price: number;
+  image_path?: string;
+  image?: string; 
+  image_url?: string; 
 }
 
 export interface Cart {
@@ -27,8 +29,10 @@ export interface Cart {
 interface CartContextType {
   cart: Cart;
   loading: boolean;
+  isLoading?: boolean; // Optional alias for loading
   error: string | null;
-  items: CartItem[]; // Keep this for backward compatibility
+  items: CartItem[];
+  cartCount: number; // Add this
   
   addItem: (inventoryId: number, quantity?: number) => Promise<void>;
   updateItem: (itemId: string, quantity: number) => Promise<void>;
@@ -53,6 +57,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart>(defaultCart);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Calculate cart count from items
+  const cartCount = cart.items.reduce((total, item) => total + item.quantity, 0);
 
   const refreshCart = useCallback(async () => {
     setLoading(true);
@@ -142,9 +149,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   return (
     <CartContext.Provider value={{
       cart,
-      items: cart.items, // Provide items for backward compatibility
+      items: cart.items,
       loading,
+      isLoading: loading, // Provide both for compatibility
       error,
+      cartCount, // Add this
       addItem,
       updateItem,
       removeItem,

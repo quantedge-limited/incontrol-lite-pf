@@ -4,7 +4,6 @@ export interface SalesStats {
   total_revenue: number;
   recent_revenue: number;
   total_sales: number;
-  recent_sales: number;
   avg_order_value: number;
   monthly_trend: number[];
   total_profit: number;
@@ -104,17 +103,36 @@ async function apiRequest<T>(
   options: RequestInit = {},
   requireAuth: boolean = true
 ): Promise<T> {
-  const headers: HeadersInit = { 'Content-Type': 'application/json', ...options.headers };
+  // Create headers as a plain object
+  const headersObj: Record<string, string> = { 
+    'Content-Type': 'application/json',
+  };
 
+  // Add any headers from options
+  if (options.headers) {
+    if (Array.isArray(options.headers)) {
+      options.headers.forEach(([key, value]) => {
+        headersObj[key] = value;
+      });
+    } else if (options.headers instanceof Headers) {
+      options.headers.forEach((value, key) => {
+        headersObj[key] = value;
+      });
+    } else {
+      Object.assign(headersObj, options.headers);
+    }
+  }
+
+  // Add auth header if required
   if (requireAuth) {
     const token = localStorage.getItem('access_token');
     if (!token) throw new Error('Authentication token missing');
-    headers['Authorization'] = `Bearer ${token}`;
+    headersObj['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers,
+    headers: headersObj,
     credentials: 'include', // for session cookies
   });
 
@@ -143,12 +161,17 @@ export const salesApi = {
   list: () => apiRequest<Sale[]>('/sales/'),
 
   create: (saleData: CreateSaleDto) =>
-    apiRequest<Sale>('/sales/create/', { method: 'POST', body: JSON.stringify(saleData) }),
+    apiRequest<Sale>('/sales/create/', { 
+      method: 'POST', 
+      body: JSON.stringify(saleData) 
+    }),
 
   get: (id: string) => apiRequest<Sale>(`/sales/${id}/`),
 
   delete: (id: string) =>
-    apiRequest<void>(`/sales/${id}/delete/`, { method: 'DELETE' }),
+    apiRequest<void>(`/sales/${id}/delete/`, { 
+      method: 'DELETE' 
+    }),
 
   // -------------------
   // CART API (guest-friendly)
@@ -156,25 +179,42 @@ export const salesApi = {
   getCart: () => apiRequest<Cart>('/sales/cart/', {}, false),
 
   addToCart: (inventoryId: number, quantity: number = 1) =>
-    apiRequest<CartItem>(
+    apiRequest<Cart>(  // Changed from CartItem to Cart if backend returns full cart
       '/sales/cart/',
-      { method: 'POST', body: JSON.stringify({ inventory_id: inventoryId, quantity }) },
+      { 
+        method: 'POST', 
+        body: JSON.stringify({ inventory_id: inventoryId, quantity }) 
+      },
       false
     ),
 
   updateCartItem: (itemId: string, quantity: number) =>
-    apiRequest<CartItem>(
+    apiRequest<Cart>(  // Changed from CartItem to Cart if backend returns full cart
       `/sales/cart/items/${itemId}/`,
-      { method: 'PUT', body: JSON.stringify({ quantity }) },
+      { 
+        method: 'PUT', 
+        body: JSON.stringify({ quantity }) 
+      },
       false
     ),
 
   removeCartItem: (itemId: string) =>
-    apiRequest<void>(`/sales/cart/items/${itemId}/`, { method: 'DELETE' }, false),
+    apiRequest<void>(
+      `/sales/cart/items/${itemId}/`, 
+      { method: 'DELETE' }, 
+      false
+    ),
 
   clearCart: () =>
     apiRequest<void>('/sales/cart/', { method: 'DELETE' }, false),
 
   checkout: (checkoutData: CheckoutDto) =>
-    apiRequest<Sale>('/sales/checkout/', { method: 'POST', body: JSON.stringify(checkoutData) }, false),
+    apiRequest<Sale>(
+      '/sales/checkout/', 
+      { 
+        method: 'POST', 
+        body: JSON.stringify(checkoutData) 
+      }, 
+      false
+    ),
 };

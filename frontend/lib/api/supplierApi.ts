@@ -1,5 +1,4 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
 import { authApi } from './authApi';
 
@@ -44,9 +43,7 @@ export const supplierApi = {
 
     const res = await fetch(`${API_BASE}/staff/suppliers/create/`, {
       method: 'POST',
-      headers: authApi.getAuthHeaders({
-        'Content-Type': 'application/json',
-      }),
+      headers: authApi.getAuthHeaders(), // No arguments needed
       body: JSON.stringify(payload),
     });
 
@@ -61,7 +58,7 @@ export const supplierApi = {
   // List all suppliers
   async list(): Promise<Supplier[]> {
     const res = await fetch(`${API_BASE}/staff/suppliers/`, {
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments needed
     });
 
     if (!res.ok) {
@@ -74,7 +71,7 @@ export const supplierApi = {
   // Get single supplier
   async get(id: string): Promise<Supplier> {
     const res = await fetch(`${API_BASE}/staff/suppliers/${id}/`, {
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments needed
     });
 
     if (!res.ok) {
@@ -91,9 +88,7 @@ export const supplierApi = {
   ): Promise<Supplier> {
     const res = await fetch(`${API_BASE}/staff/suppliers/${id}/update/`, {
       method: 'PUT',
-      headers: authApi.getAuthHeaders({
-        'Content-Type': 'application/json',
-      }),
+      headers: authApi.getAuthHeaders(), // No arguments needed
       body: JSON.stringify(supplierData),
     });
 
@@ -108,7 +103,7 @@ export const supplierApi = {
   async delete(id: string): Promise<void> {
     const res = await fetch(`${API_BASE}/staff/suppliers/${id}/delete/`, {
       method: 'DELETE',
-      headers: authApi.getAuthHeaders(),
+      headers: authApi.getAuthHeaders(), // No arguments needed
     });
 
     if (!res.ok) {

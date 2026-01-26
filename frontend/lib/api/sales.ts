@@ -44,7 +44,6 @@ export interface Sale {
   items: SaleItem[];
 }
 
-
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {},
@@ -52,16 +51,34 @@ async function apiRequest<T>(
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   
-  const headers: HeadersInit = {
+  // Create headers as a plain object
+  const headersObj: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
   };
 
-  // Only add auth token if required
+  // Add any headers from options
+  if (options.headers) {
+    if (Array.isArray(options.headers)) {
+      // Handle array of [key, value] pairs
+      options.headers.forEach(([key, value]) => {
+        headersObj[key] = value;
+      });
+    } else if (options.headers instanceof Headers) {
+      // Handle Headers object
+      options.headers.forEach((value, key) => {
+        headersObj[key] = value;
+      });
+    } else {
+      // Handle plain object
+      Object.assign(headersObj, options.headers);
+    }
+  }
+
+  // Add auth token if required
   if (requireAuth) {
     const token = localStorage.getItem('access_token');
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headersObj['Authorization'] = `Bearer ${token}`;
     }
   }
 
@@ -71,7 +88,7 @@ async function apiRequest<T>(
 
     const response = await fetch(url, {
       ...options,
-      headers,
+      headers: headersObj,
       credentials: 'include',
       signal: controller.signal,
     });
@@ -130,11 +147,11 @@ export const posApi = {
       page: number;
       page_size: number;
       pages: number;
-    }>(url);
+    }>(url, {}, true); // Add requireAuth: true for admin endpoints
   },
 
   getSale: (saleId: string) =>
-    apiRequest<Sale>(`/sales/pos/sales/${saleId}/`),
+    apiRequest<Sale>(`/sales/pos/sales/${saleId}/`, {}, true),
 
   createSale: (data: {
     client?: number;
@@ -147,31 +164,31 @@ export const posApi = {
     buyer_address?: string;
     payment_method?: 'cash' | 'mpesa';
     items: {
-      inventory: number;  // Fixed: was inventory_id
+      inventory: number;
       quantity: number;
       price_per_unit?: number;
     }[];
   }) => apiRequest<Sale>('/sales/pos/sales/', {
     method: 'POST',
     body: JSON.stringify(data),
-  }),
+  }, true),
 
   cancelSale: (saleId: string) =>
     apiRequest<{ message: string }>(`/sales/pos/sales/${saleId}/`, {
       method: 'DELETE',
-    }),
+    }, true),
 };
 
 // ===== CART API (Public) =====
 export const cartApi = {
   getCart: () =>
-    apiRequest<Cart>('/sales/cart/'),
+    apiRequest<Cart>('/sales/cart/'), // requireAuth defaults to false
 
   addToCart: (inventoryId: number, quantity: number = 1) =>
     apiRequest<Cart>('/sales/cart/', {
       method: 'POST',
       body: JSON.stringify({ 
-        inventory_id: inventoryId,  // Fixed: was inventory_id
+        inventory_id: inventoryId,
         quantity 
       }),
     }),
@@ -180,7 +197,7 @@ export const cartApi = {
     apiRequest<Cart>(`/sales/cart/items/${itemId}/`, {
       method: 'PUT',
       body: JSON.stringify({ quantity }),
-    }, false),
+    }),
 
   removeCartItem: (itemId: string) =>
     apiRequest<Cart>(`/sales/cart/items/${itemId}/`, {

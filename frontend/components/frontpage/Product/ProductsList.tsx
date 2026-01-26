@@ -1,3 +1,4 @@
+// components/frontpage/Product/ProductsList.tsx - FIXED
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -17,7 +18,11 @@ interface Product {
   supplier?: string;
 }
 
-export const ProductsList: React.FC = () => {
+interface ProductsListProps {
+  onAddToCart?: (product: Product) => void; // Add this prop
+}
+
+export const ProductsList: React.FC<ProductsListProps> = ({ onAddToCart }) => { // Accept the prop
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,7 +40,7 @@ export const ProductsList: React.FC = () => {
         const mapped: Product[] = data
           .filter((item: any) => item.is_active && item.quantity > 0)
           .map((item: any) => ({
-            id: item.id.toString(), // Keep as string if that's what your CardContext expects
+            id: item.id.toString(),
             name: item.name,
             price: item.price_per_unit,
             description: item.description ?? '',
@@ -147,7 +152,11 @@ export const ProductsList: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {filteredProducts.map(product => (
-                <ProductCard key={product.id} {...product} />
+                <ProductCard 
+                  key={product.id} 
+                  {...product} 
+                  onAddToCart={onAddToCart} // Pass the prop to ProductCard
+                />
               ))}
             </div>
           )}

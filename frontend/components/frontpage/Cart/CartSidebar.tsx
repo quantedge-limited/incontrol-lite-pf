@@ -12,7 +12,7 @@ interface CartSidebarProps {
 }
 
 export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }) => {
-  const { items, totalPrice, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { cart, items, removeItem, updateItem, clearCart } = useCart(); // Changed function names
   const [isMounted, setIsMounted] = useState(false);
   
   useEffect(() => {
@@ -25,9 +25,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
   
   const cartItems = items || [];
   
-  // Calculate subtotal, tax, and total
-  const subtotal = totalPrice || cartItems.reduce(
-    (sum, item) => sum + (item.price * (item.quantity || 1)), 
+  // Calculate subtotal, tax, and total - use cart.total_price
+  const subtotal = cart?.total_price || cartItems.reduce(
+    (sum, item) => sum + (item.price_per_unit * (item.quantity || 1)), 
     0
   );
   const tax = subtotal * 0.16; // 16% VAT
@@ -82,40 +82,48 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
                     <div key={item.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                       <div className="flex gap-4">
                         <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
-                          {/* Use image_url if available, fallback to image_path */}
-                          {(item.image_url || item.image_path) ? (
+                          {item.image_path ? (
                             <img 
-                              src={item.image_url || item.image_path} 
-                              alt={item.name} 
-                              className="w-full h-full object-cover rounded-lg" 
+                              src={item.image_path.startsWith('http') ? item.image_path : `/images/products/${item.image_path}`}
+                              alt={item.inventory_name}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                e.currentTarget.src = '/images/placeholder.jpg';
+                              }}
+                            />
+                          ) : item.image ? (
+                            <img 
+                              src={item.image.startsWith('http') ? item.image : `/images/products/${item.image}`}
+                              alt={item.inventory_name}
+                              className="w-full h-full object-cover rounded-lg"
                               onError={(e) => {
                                 e.currentTarget.src = '/images/placeholder.jpg';
                               }}
                             />
                           ) : (
                             <span className="text-lg font-bold text-gray-600">
-                              {item.name.slice(0, 2).toUpperCase()}
+                              {item.inventory_name?.slice(0, 2).toUpperCase()}
                             </span>
                           )}
                         </div>
                         
                         <div className="flex-1">
-                          <h3 className="font-bold text-gray-900 mb-1">{item.name}</h3>
+                          <h3 className="font-bold text-gray-900 mb-1">{item.inventory_name}</h3>
                           <div className="flex items-center justify-between">
                             <div className="text-2xl font-bold" style={{ color: '#0091AD' }}>
-                              KES {Number(item.price).toFixed(0)}
+                              KES {Number(item.price_per_unit || item.price_per_unit).toFixed(0)}
                             </div>
                             
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => updateQuantity(item.id, Math.max(1, (item.quantity || 1) - 1))}
+                                onClick={() => updateItem(item.id, Math.max(1, (item.quantity || 1) - 1))}
                                 className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100"
                               >
                                 -
                               </button>
                               <span className="w-8 text-center font-medium">{item.quantity || 1}</span>
                               <button
-                                onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
+                                onClick={() => updateItem(item.id, (item.quantity || 1) + 1)}
                                 className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 hover:bg-gray-100"
                               >
                                 +
@@ -123,13 +131,14 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
                             </div>
                           </div>
                         </div>
-                        
+
                         <button
-                          onClick={() => removeFromCart(item.id)}
+                          onClick={() => removeItem(item.id)}
                           className="p-2 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
                         >
                           <Trash2 size={20} />
                         </button>
+                      
                       </div>
                     </div>
                   ))}

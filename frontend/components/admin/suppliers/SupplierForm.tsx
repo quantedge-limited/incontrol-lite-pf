@@ -41,12 +41,12 @@ export default function SupplierForm({ onSave, editSupplier, onCancel }: Supplie
     try {
       const apiData = {
         name: formData.name,
-        email: formData.email || null,
-        phone_number: formData.phone_number || null,
-        address: formData.address || null,
-        additional_info: formData.additional_info ? { 
-          supplies: formData.additional_info 
-        } : null,
+        email: formData.email || undefined,
+        phone_number: formData.phone_number || undefined,
+        address: formData.address || undefined,
+        additional_info: typeof formData.additional_info === 'string' 
+          ? formData.additional_info || undefined 
+          : JSON.stringify(formData.additional_info) || undefined,
       };
 
       if (editSupplier) {

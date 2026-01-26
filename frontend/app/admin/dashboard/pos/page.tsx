@@ -9,9 +9,8 @@ import POSLayout from '@/components/admin/pos/POSLayout';
 import CartSidebar from '@/components/admin/pos/CartSidebar';
 import InventoryGrid from '@/components/admin/pos/InventoryGrid';
 import CheckoutModal from '@/components/admin/pos/CheckoutModal';
-import { inventoryApi } from '@/lib/api/inventoryApi';
+import { inventoryApi, InventoryItem } from '@/lib/api/inventoryApi';
 import { posApi } from '@/lib/api/sales';
-import type { InventoryItem } from '@/types/inventory';
 
 interface CartItem {
   id: string;

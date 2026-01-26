@@ -23,20 +23,38 @@ async function publicApiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const headers: HeadersInit = { 
-    'Content-Type': 'application/json', 
-    ...options.headers 
+  // Create headers as a plain object
+  const headersObj: Record<string, string> = { 
+    'Content-Type': 'application/json',
   };
 
-  // Add cache control headers to prevent caching
-  headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-  headers['Pragma'] = 'no-cache';
-  headers['Expires'] = '0';
+  // Add cache control headers
+  headersObj['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+  headersObj['Pragma'] = 'no-cache';
+  headersObj['Expires'] = '0';
+
+  // Add any custom headers from options
+  if (options.headers) {
+    if (Array.isArray(options.headers)) {
+      // Handle array of [key, value] pairs
+      options.headers.forEach(([key, value]) => {
+        headersObj[key] = value;
+      });
+    } else if (options.headers instanceof Headers) {
+      // Handle Headers object
+      options.headers.forEach((value, key) => {
+        headersObj[key] = value;
+      });
+    } else {
+      // Handle plain object
+      Object.assign(headersObj, options.headers);
+    }
+  }
 
   try {
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
-      headers,
+      headers: headersObj,
       credentials: 'include',  // Important for sessions
     });
 

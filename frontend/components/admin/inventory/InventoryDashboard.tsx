@@ -21,6 +21,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import InventoryForm from './InventoryForm';
 import { inventoryApi } from '@/lib/api/inventoryApi';
 import type { InventoryItem } from './types';
+
 export default function InventoryDashboard() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>([]);
@@ -29,11 +30,10 @@ export default function InventoryDashboard() {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   
-  // Filters
+  // Filters - remove filterSupplier since it doesn't exist
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBrand, setFilterBrand] = useState('');
-  const [filterSupplier, setFilterSupplier] = useState('');
-  const [filterStock, setFilterStock] = useState<'all' | 'low' | 'expiring'>('all');
+  const [filterStock, setFilterStock] = useState<'all' | 'low'>('all');
 
   // Load inventory
   useEffect(() => {
@@ -42,6 +42,7 @@ export default function InventoryDashboard() {
 
   const fetchInventory = async () => {
     try {
+      setLoading(true);
       const data = await inventoryApi.list();
       setInventory(data);
       setFilteredInventory(data);
@@ -60,10 +61,9 @@ export default function InventoryDashboard() {
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.brand_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.supplier_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        item.brand_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.description?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.category_details?.name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -72,46 +72,21 @@ export default function InventoryDashboard() {
       filtered = filtered.filter(item => item.brand_name === filterBrand);
     }
 
-    // Supplier filter
-    if (filterSupplier) {
-      filtered = filtered.filter(item => item.supplier_name === filterSupplier);
-    }
-
-    // Stock filter
+    // Stock filter - use quantity_in_stock
     if (filterStock === 'low') {
-      filtered = filtered.filter(item => item.quantity < 10);
-    } else if (filterStock === 'expiring') {
-      const today = new Date();
-      const nextMonth = new Date();
-      nextMonth.setMonth(today.getMonth() + 1);
-      filtered = filtered.filter(item => {
-        if (!item.expiry_date) return false;
-        const expiryDate = new Date(item.expiry_date);
-        return expiryDate <= nextMonth && expiryDate >= today;
-      });
+      filtered = filtered.filter(item => item.quantity_in_stock < 10);
     }
 
     setFilteredInventory(filtered);
-  }, [inventory, searchTerm, filterBrand, filterSupplier, filterStock]);
+  }, [inventory, searchTerm, filterBrand, filterStock]);
 
-  // Calculate stats
+  // Calculate stats - FIXED
   const stats = {
-    totalItems: inventory.reduce((sum, item) => sum + item.quantity, 0),
-    totalValue: inventory.reduce((sum, item) => sum + item.total_value, 0),
-    itemsExpiringSoon: inventory.filter(item => {
-      if (!item.expiry_date) return false;
-      const expiryDate = new Date(item.expiry_date);
-      const nextMonth = new Date();
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
-      return expiryDate <= nextMonth && expiryDate >= new Date();
-    }).length,
-    lowStockItems: inventory.filter(item => item.quantity < 10).length,
-    recentAdditions: inventory.filter(item => {
-      const receivedDate = new Date(item.received_at);
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      return receivedDate >= weekAgo;
-    }).length,
+    totalItems: inventory.reduce((sum, item) => sum + item.quantity_in_stock, 0),
+    totalValue: inventory.reduce((sum, item) => sum + (item.selling_price * item.quantity_in_stock), 0),
+    lowStockItems: inventory.filter(item => item.quantity_in_stock < 10).length,
+    itemsExpiringSoon: 0, // Not available in your API
+    recentAdditions: 0, // Not available in your API
   };
 
   const handleSaveItem = async () => {
@@ -152,13 +127,9 @@ export default function InventoryDashboard() {
     setSelectedItem(null);
   };
 
-  // Get unique brands and suppliers for filters
+  // Get unique brands for filters
   const brands = Array.from(new Set(
     inventory.map(item => item.brand_name).filter(Boolean)
-  ));
-  
-  const suppliers = Array.from(new Set(
-    inventory.map(item => item.supplier_name).filter(Boolean)
   ));
 
   if (loading) {
@@ -257,13 +228,13 @@ export default function InventoryDashboard() {
           <div className="bg-white rounded-xl p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Expiring Soon</p>
+                <p className="text-sm font-medium text-gray-600">Categories</p>
                 <p className="text-3xl font-bold text-red-600 mt-2">
-                  {stats.itemsExpiringSoon}
+                  {Array.from(new Set(inventory.map(item => item.category_details?.name).filter(Boolean))).length}
                 </p>
               </div>
               <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
-                <Calendar className="h-6 w-6 text-red-600" />
+                <Building2 className="h-6 w-6 text-red-600" />
               </div>
             </div>
           </div>
@@ -271,9 +242,9 @@ export default function InventoryDashboard() {
           <div className="bg-white rounded-xl p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Last 7 Days</p>
+                <p className="text-sm font-medium text-gray-600">Active Items</p>
                 <p className="text-3xl font-bold text-blue-600 mt-2">
-                  {stats.recentAdditions}
+                  {inventory.filter(item => item.is_active).length}
                 </p>
               </div>
               <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -317,31 +288,18 @@ export default function InventoryDashboard() {
               </select>
 
               <select
-                value={filterSupplier}
-                onChange={(e) => setFilterSupplier(e.target.value)}
-                className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              >
-                <option value="">All Suppliers</option>
-                {suppliers.map(supplier => (
-                  <option key={supplier} value={supplier}>{supplier}</option>
-                ))}
-              </select>
-
-              <select
                 value={filterStock}
                 onChange={(e) => setFilterStock(e.target.value as any)}
                 className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               >
                 <option value="all">All Stock</option>
                 <option value="low">Low Stock (&lt;10)</option>
-                <option value="expiring">Expiring Soon</option>
               </select>
 
               <button
                 onClick={() => {
                   setSearchTerm('');
                   setFilterBrand('');
-                  setFilterSupplier('');
                   setFilterStock('all');
                 }}
                 className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
@@ -403,7 +361,7 @@ export default function InventoryDashboard() {
                     Item Details
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Brand/Supplier
+                    Brand/Category
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Stock Info
@@ -421,15 +379,13 @@ export default function InventoryDashboard() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredInventory.map((item) => {
-                  const isLowStock = item.quantity < 10;
-                  const isExpiring = item.expiry_date && 
-                    new Date(item.expiry_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                  const isLowStock = item.quantity_in_stock < 10;
                   
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 group">
                       <td className="px-6 py-4">
                         <div>
-                          <div className="font-medium text-gray-900">{item.name}</div>
+                          <div className="font-medium text-gray-900">{item.brand_name}</div>
                           <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
                             {item.description || 'No description'}
                           </div>
@@ -444,10 +400,10 @@ export default function InventoryDashboard() {
                               <span className="text-gray-700">{item.brand_name}</span>
                             </div>
                           )}
-                          {item.supplier_name && (
+                          {item.category_details?.name && (
                             <div className="flex items-center text-sm">
                               <Truck className="h-4 w-4 text-gray-400 mr-2" />
-                              <span className="text-gray-700">{item.supplier_name}</span>
+                              <span className="text-gray-700">{item.category_details.name}</span>
                             </div>
                           )}
                         </div>
@@ -460,37 +416,35 @@ export default function InventoryDashboard() {
                               ? 'bg-red-100 text-red-800' 
                               : 'bg-emerald-100 text-emerald-800'
                           }`}>
-                            {item.quantity} units
+                            {item.quantity_in_stock} units
                           </div>
                           {isLowStock && (
                             <AlertTriangle className="h-4 w-4 text-red-500" />
                           )}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          Status: {item.is_active ? 'Active' : 'Inactive'}
                         </div>
                       </td>
                       
                       <td className="px-6 py-4">
                         <div className="space-y-1 text-sm">
                           <div className="text-gray-600">
-                            Received: {new Date(item.received_at).toLocaleDateString()}
+                            Added: {new Date(item.created_at).toLocaleDateString()}
                           </div>
-                          {item.expiry_date && (
-                            <div className={`flex items-center ${
-                              isExpiring ? 'text-red-600' : 'text-gray-600'
-                            }`}>
-                              <Calendar className="h-3 w-3 mr-1" />
-                              Expires: {new Date(item.expiry_date).toLocaleDateString()}
-                            </div>
-                          )}
+                          <div className="text-gray-600">
+                            Updated: {new Date(item.updated_at).toLocaleDateString()}
+                          </div>
                         </div>
                       </td>
                       
                       <td className="px-6 py-4">
                         <div className="text-sm">
                           <div className="font-semibold text-emerald-900">
-                            KES {item.price_per_unit.toLocaleString()}/unit
+                            KES {item.selling_price.toLocaleString()}/unit
                           </div>
                           <div className="text-gray-500">
-                            Total: KES {item.total_value.toLocaleString()}
+                            Total: KES {(item.selling_price * item.quantity_in_stock).toLocaleString()}
                           </div>
                         </div>
                       </td>
@@ -529,16 +483,16 @@ export default function InventoryDashboard() {
                   <Package className="h-8 w-8 text-gray-400" />
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {searchTerm || filterBrand || filterSupplier || filterStock !== 'all' 
+                  {searchTerm || filterBrand || filterStock !== 'all' 
                     ? 'No inventory items match your filters' 
                     : 'No inventory items yet'}
                 </h3>
                 <p className="text-gray-500 max-w-sm mx-auto mb-6">
-                  {searchTerm || filterBrand || filterSupplier || filterStock !== 'all'
+                  {searchTerm || filterBrand || filterStock !== 'all'
                     ? 'Try adjusting your filters' 
                     : 'Add your first inventory item to get started'}
                 </p>
-                {!showForm && !searchTerm && !filterBrand && !filterSupplier && filterStock === 'all' && (
+                {!showForm && !searchTerm && !filterBrand && filterStock === 'all' && (
                   <button
                     onClick={() => setShowForm(true)}
                     className="px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 inline-flex items-center gap-2"
@@ -553,7 +507,7 @@ export default function InventoryDashboard() {
         </motion.div>
       </div>
 
-      {/* Item Details Modal */}
+      {/* Item Details Modal - FIXED */}
       <AnimatePresence>
         {selectedItem && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -565,7 +519,7 @@ export default function InventoryDashboard() {
             >
               <div className="px-8 py-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedItem.name}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedItem.brand_name}</h2>
                   <button
                     onClick={handleCloseModal}
                     className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -585,26 +539,24 @@ export default function InventoryDashboard() {
                       <p className="text-gray-900">{selectedItem.description || 'No description'}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Quantity</p>
-                      <p className="text-gray-900 font-semibold">{selectedItem.quantity} units</p>
+                      <p className="text-sm text-gray-600">Quantity in Stock</p>
+                      <p className="text-gray-900 font-semibold">{selectedItem.quantity_in_stock} units</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Brand & Supplier */}
+                {/* Brand & Category */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Supplier Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Category Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedItem.brand_name && (
+                    <div>
+                      <p className="text-sm text-gray-600">Brand Name</p>
+                      <p className="text-gray-900">{selectedItem.brand_name}</p>
+                    </div>
+                    {selectedItem.category_details?.name && (
                       <div>
-                        <p className="text-sm text-gray-600">Brand</p>
-                        <p className="text-gray-900">{selectedItem.brand_name}</p>
-                      </div>
-                    )}
-                    {selectedItem.supplier_name && (
-                      <div>
-                        <p className="text-sm text-gray-600">Supplier</p>
-                        <p className="text-gray-900">{selectedItem.supplier_name}</p>
+                        <p className="text-sm text-gray-600">Category</p>
+                        <p className="text-gray-900">{selectedItem.category_details.name}</p>
                       </div>
                     )}
                   </div>
@@ -613,46 +565,6 @@ export default function InventoryDashboard() {
                 {/* Dates */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Dates</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600">Received On</p>
-                      <p className="text-gray-900">
-                        {new Date(selectedItem.received_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {selectedItem.expiry_date && (
-                      <div>
-                        <p className="text-sm text-gray-600">Expiry Date</p>
-                        <p className="text-gray-900">
-                          {new Date(selectedItem.expiry_date).toLocaleDateString()}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Value */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Value Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600">Price per Unit</p>
-                      <p className="text-gray-900 font-semibold">
-                        KES {selectedItem.price_per_unit.toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Total Value</p>
-                      <p className="text-gray-900 font-semibold text-emerald-700">
-                        KES {selectedItem.total_value.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Metadata */}
-                <div className="pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Metadata</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-gray-600">Created On</p>
@@ -664,6 +576,37 @@ export default function InventoryDashboard() {
                       <p className="text-sm text-gray-600">Last Updated</p>
                       <p className="text-gray-900">
                         {new Date(selectedItem.updated_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Value */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Value Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Selling Price per Unit</p>
+                      <p className="text-gray-900 font-semibold">
+                        KES {selectedItem.selling_price.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Cost Price per Unit</p>
+                      <p className="text-gray-900 font-semibold">
+                        KES {selectedItem.cost_price?.toLocaleString() || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Total Stock Value</p>
+                      <p className="text-gray-900 font-semibold text-emerald-700">
+                        KES {(selectedItem.selling_price * selectedItem.quantity_in_stock).toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Status</p>
+                      <p className={`font-semibold ${selectedItem.is_active ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedItem.is_active ? 'Active' : 'Inactive'}
                       </p>
                     </div>
                   </div>

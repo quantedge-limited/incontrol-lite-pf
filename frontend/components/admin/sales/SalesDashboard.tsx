@@ -1,3 +1,4 @@
+// components/admin/sales/SalesDashboard.tsx - UPDATED
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -17,9 +18,29 @@ import { motion } from "framer-motion";
 import SalesChart from "./SalesChart";
 import SalesFilters from "./SalesFilters";
 import SalesTable from "./SalesTable";
-import { salesApi, SalesStats } from "@/lib/api/salesApi";
+import { salesApi } from "@/lib/api/salesApi";
 import { inventoryApi } from "@/lib/api/inventoryApi";
 import { toast } from "react-toastify";
+import type { Order } from "@/lib/api/salesApi";
+
+// Define stats interface locally since we removed it from the API
+interface SalesStats {
+  total_revenue: number;
+  recent_revenue: number;
+  total_sales: number;
+  avg_order_value: number;
+  monthly_trend: number[];
+  total_profit: number;
+  recent_profit: number;
+  top_products: Array<{
+    name: string;
+    total_quantity: number;
+    total_revenue: number;
+  }>;
+  low_stock_items: number;
+  out_of_stock_items: number;
+  recent_sales: number;
+}
 
 interface MonthData {
   label: string;
@@ -34,7 +55,7 @@ function monthLabel(d: Date): string {
 
 export default function SalesDashboard() {
   const router = useRouter();
-  const [sales, setSales] = useState<any[]>([]);
+  const [sales, setSales] = useState<Order[]>([]);
   const [stats, setStats] = useState<SalesStats | null>(null);
   const [month, setMonth] = useState<string | null>(null);
   const [showWalkInTable, setShowWalkInTable] = useState(false);
@@ -54,16 +75,18 @@ export default function SalesDashboard() {
           return;
         }
 
-        // Fetch sales, stats, and inventory in parallel
-        const [salesData, statsData, inventoryData] = await Promise.all([
-          salesApi.list().catch(() => []),
-          salesApi.getStats().catch(() => null),
+        // Fetch orders (sales) and inventory in parallel
+        const [ordersData, inventoryData] = await Promise.all([
+          salesApi.getOrders().catch(() => []),
           inventoryApi.list().catch(() => []),
         ]);
 
-        setSales(salesData);
-        setStats(statsData);
+        setSales(ordersData);
         setInventoryItems(inventoryData);
+        
+        // Calculate stats from orders since we don't have stats endpoint
+        const calculatedStats = calculateStatsFromOrders(ordersData);
+        setStats(calculatedStats);
       } catch (error) {
         console.error('Failed to fetch data:', error);
         toast.error('Failed to load sales data');
@@ -74,6 +97,53 @@ export default function SalesDashboard() {
 
     fetchData();
   }, [router]);
+
+  // Helper function to calculate stats from orders
+  const calculateStatsFromOrders = (orders: Order[]): SalesStats => {
+    const totalRevenue = orders.reduce((sum, order) => sum + order.subtotal, 0);
+    const totalSales = orders.length;
+    const avgOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
+    
+    // Calculate monthly trend (last 12 months)
+    const monthlyTrend = Array(12).fill(0);
+    const now = new Date();
+    
+    orders.forEach(order => {
+      const orderDate = new Date(order.created_at);
+      const monthsAgo = (now.getFullYear() - orderDate.getFullYear()) * 12 + 
+                       (now.getMonth() - orderDate.getMonth());
+      
+      if (monthsAgo >= 0 && monthsAgo < 12) {
+        monthlyTrend[11 - monthsAgo] += order.subtotal;
+      }
+    });
+
+    return {
+      total_revenue: totalRevenue,
+      recent_revenue: orders
+        .filter(order => {
+          const orderDate = new Date(order.created_at);
+          const monthAgo = new Date();
+          monthAgo.setMonth(monthAgo.getMonth() - 1);
+          return orderDate > monthAgo;
+        })
+        .reduce((sum, order) => sum + order.subtotal, 0),
+      total_sales: totalSales,
+      avg_order_value: avgOrderValue,
+      monthly_trend: monthlyTrend,
+      total_profit: totalRevenue * 0.3, // Assuming 30% profit margin
+      recent_profit: 0,
+      top_products: [],
+      low_stock_items: 0,
+      out_of_stock_items: 0,
+      recent_sales: orders.filter(order => {
+        const orderDate = new Date(order.created_at);
+        const monthAgo = new Date();
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        return orderDate > monthAgo;
+      }).length,
+    };
+  };
 
   const chartData = useMemo(() => {
     const now = new Date();
@@ -105,25 +175,15 @@ export default function SalesDashboard() {
         .filter((s) => {
           const d = new Date(s.created_at);
           return (
-            s.sale_type === "online" &&
             d.getFullYear() === m.year &&
             d.getMonth() === m.monthIndex
           );
         })
-        .reduce((a, b) => a + b.total_amount, 0)
+        .reduce((a, b) => a + b.subtotal, 0)
     );
-    const walkInTotals = months.map((m) =>
-      sales
-        .filter((s) => {
-          const d = new Date(s.created_at);
-          return (
-            s.sale_type === "walkin" &&
-            d.getFullYear() === m.year &&
-            d.getMonth() === m.monthIndex
-          );
-        })
-        .reduce((a, b) => a + b.total_amount, 0)
-    );
+    
+    // Since your Order model doesn't have sale_type, we'll show all as online
+    const walkInTotals = months.map(() => 0); // Empty for walk-in if not tracked
     
     return {
       months: months.map((m) => m.label),
@@ -144,11 +204,9 @@ export default function SalesDashboard() {
     });
   }, [sales, month]);
 
-  const walkInSales = filteredSales
-    .filter((s) => s.sale_type === "walkin")
-    .slice(0, 10);
+  const walkInSales = filteredSales.slice(0, 10); // Show first 10 sales
   
-  const totalRevenue = stats?.total_revenue || filteredSales.reduce((a, b) => a + b.total_amount, 0);
+  const totalRevenue = stats?.total_revenue || filteredSales.reduce((a, b) => a + b.subtotal, 0);
 
   async function addSale(saleData: any) {
     try {
@@ -156,30 +214,25 @@ export default function SalesDashboard() {
       
       // Prepare items for the sale
       const items = saleData.items?.map((item: any) => ({
-        inventory: item.inventory,
+        inventory_id: item.inventory,
         quantity: item.quantity,
-        price_per_unit: item.price_per_unit,
       })) || [];
 
-      const saleToCreate = {
-        buyer_name: saleData.buyer_name || saleData.customerName,
-        buyer_phone: saleData.buyer_phone || saleData.phone,
-        sale_type: 'walkin' as const,
-        total_amount: saleData.total_amount || saleData.amount,
-        notes: saleData.notes || '',
+      const orderToCreate = {
+        customer_name: saleData.customerName || saleData.buyer_name,
+        customer_phone: saleData.phone || saleData.buyer_phone,
+        customer_email: saleData.email || saleData.buyer_email,
         items,
       };
 
-      const createdSale = await salesApi.create(saleToCreate);
+      const createdOrder = await salesApi.createOrder(orderToCreate);
       
       // Refresh data
-      const [salesData, statsData] = await Promise.all([
-        salesApi.list(),
-        salesApi.getStats(),
-      ]);
+      const ordersData = await salesApi.getOrders();
+      const calculatedStats = calculateStatsFromOrders(ordersData);
 
-      setSales(salesData);
-      setStats(statsData);
+      setSales(ordersData);
+      setStats(calculatedStats);
       setMonth(null);
       
       toast.success('Sale recorded successfully!');
@@ -194,11 +247,12 @@ export default function SalesDashboard() {
   const exportToCSV = () => {
     const headers = [
       "Date",
-      "Type",
+      "Order #",
       "Customer",
       "Phone",
       "Items",
       "Total (KES)",
+      "Status",
     ];
     const rows = filteredSales.map((s) => {
       const d = new Date(s.created_at);
@@ -209,11 +263,12 @@ export default function SalesDashboard() {
       });
       return [
         dateStr,
-        s.sale_type,
-        s.buyer_name || "Guest",
-        s.buyer_phone || "N/A",
+        s.reference || s.id.substring(0, 8),
+        s.customer_name || "Guest",
+        s.customer_phone || "N/A",
         s.items.length,
-        s.total_amount.toFixed(2),
+        s.subtotal.toFixed(2),
+        s.status,
       ];
     });
     const csvContent = [headers, ...rows].map((e) => e.join(",")).join("\n");
@@ -301,7 +356,7 @@ export default function SalesDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase">
-                  Total Sales
+                  Total Orders
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-blue-700 mt-1">
                   {stats?.total_sales || sales.length}
@@ -343,10 +398,10 @@ export default function SalesDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase">
-                  Low Stock Items
+                  Recent Orders
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-amber-700 mt-1">
-                  {stats?.low_stock_items || 0}
+                  {stats?.recent_sales || 0}
                 </p>
               </div>
               <div className="h-10 w-10 sm:h-12 sm:w-12 bg-amber-100 rounded-lg flex items-center justify-center">
@@ -357,13 +412,12 @@ export default function SalesDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
           {/* Charts and Tables Column */}
           <div className="lg:col-span-8 lg:order-1 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
                 <h3 className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-4">
-                  Online Revenue
+                  Monthly Revenue
                 </h3>
                 <div className="h-56 sm:h-64">
                   <SalesChart
@@ -374,7 +428,7 @@ export default function SalesDashboard() {
               </div>
               <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
                 <h3 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-4">
-                  Walk-in Revenue
+                  Orders Trend
                 </h3>
                 <div className="h-56 sm:h-64">
                   <SalesChart
@@ -389,7 +443,7 @@ export default function SalesDashboard() {
               <div className="px-6 py-5 flex justify-between items-center">
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-gray-900">
-                    Recent Sales
+                    Recent Orders
                   </h2>
                   <p className="text-[10px] sm:text-xs text-gray-500 uppercase font-semibold">
                     Latest 10 Transactions
@@ -417,25 +471,4 @@ export default function SalesDashboard() {
       </div>
     </div>
   );
-}
-
-function topProduct(sales: any[]): string {
-  if (sales.length === 0) return "—";
-  
-  // Flatten all items from all sales
-  const allItems = sales.flatMap(sale => sale.items);
-  
-  // Count occurrences of each inventory item
-  const itemCounts: Record<string, number> = {};
-  allItems.forEach(item => {
-    const name = item.inventory?.name || 'Unknown';
-    itemCounts[name] = (itemCounts[name] || 0) + item.quantity;
-  });
-  
-  // Find the item with the highest count
-  const entries = Object.entries(itemCounts);
-  if (entries.length === 0) return "—";
-  
-  entries.sort((a, b) => b[1] - a[1]);
-  return entries[0][0];
 }

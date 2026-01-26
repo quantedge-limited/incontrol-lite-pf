@@ -1,9 +1,10 @@
+// lib/api/supplierApi.ts - CORRECTED
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
 import { authApi } from './authApi';
 
 export interface Supplier {
-  id: string;
+  id: number;
   name: string;
   email?: string;
   phone_number?: string;
@@ -25,31 +26,24 @@ export interface SupplierFormData {
   email?: string;
   phone_number?: string;
   address?: string;
-  supplies?: any; // optional field mapped to additional_info
   additional_info?: any;
 }
 
 export const supplierApi = {
   // Create supplier
   async create(supplierData: SupplierFormData): Promise<Supplier> {
-    const payload = {
-      ...supplierData,
-      additional_info: supplierData.supplies
-        ? { supplies: supplierData.supplies }
-        : supplierData.additional_info || null,
-    };
-
-    delete (payload as any).supplies;
-
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/suppliers/create/`, {
       method: 'POST',
-      headers: authApi.getAuthHeaders(), // No arguments needed
-      body: JSON.stringify(payload),
+      headers: headers,
+      body: JSON.stringify(supplierData),
     });
 
     if (!res.ok) {
-      const error = await res.json().catch(() => ({ detail: 'Failed to create supplier' }));
-      throw new Error(error.detail);
+      const error = await res.json().catch(() => ({ 
+        detail: 'Failed to create supplier' 
+      }));
+      throw new Error(error.detail || 'Failed to create supplier');
     }
 
     return res.json();
@@ -57,25 +51,36 @@ export const supplierApi = {
 
   // List all suppliers
   async list(): Promise<Supplier[]> {
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/suppliers/`, {
-      headers: authApi.getAuthHeaders(), // No arguments needed
+      headers: headers,
     });
 
     if (!res.ok) {
-      throw new Error('Failed to fetch suppliers');
+      const error = await res.json().catch(() => ({ 
+        detail: 'Failed to fetch suppliers' 
+      }));
+      throw new Error(error.detail || 'Failed to fetch suppliers');
     }
 
     return res.json();
   },
 
   // Get single supplier
-  async get(id: string): Promise<Supplier> {
+  async get(id: number): Promise<Supplier> {
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/suppliers/${id}/`, {
-      headers: authApi.getAuthHeaders(), // No arguments needed
+      headers: headers,
     });
 
     if (!res.ok) {
-      throw new Error('Failed to fetch supplier');
+      if (res.status === 404) {
+        throw new Error('Supplier not found');
+      }
+      const error = await res.json().catch(() => ({ 
+        detail: 'Failed to fetch supplier' 
+      }));
+      throw new Error(error.detail || 'Failed to fetch supplier');
     }
 
     return res.json();
@@ -83,31 +88,73 @@ export const supplierApi = {
 
   // Update supplier
   async update(
-    id: string,
+    id: number,
     supplierData: Partial<SupplierFormData>
   ): Promise<Supplier> {
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/suppliers/${id}/update/`, {
       method: 'PUT',
-      headers: authApi.getAuthHeaders(), // No arguments needed
+      headers: headers,
       body: JSON.stringify(supplierData),
     });
 
     if (!res.ok) {
-      throw new Error('Failed to update supplier');
+      if (res.status === 404) {
+        throw new Error('Supplier not found');
+      }
+      const error = await res.json().catch(() => ({ 
+        detail: 'Failed to update supplier' 
+      }));
+      throw new Error(error.detail || 'Failed to update supplier');
     }
 
     return res.json();
   },
 
   // Delete supplier
-  async delete(id: string): Promise<void> {
+  async delete(id: number): Promise<void> {
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/suppliers/${id}/delete/`, {
       method: 'DELETE',
-      headers: authApi.getAuthHeaders(), // No arguments needed
+      headers: headers,
     });
 
     if (!res.ok) {
-      throw new Error('Failed to delete supplier');
+      if (res.status === 404) {
+        throw new Error('Supplier not found');
+      }
+      const error = await res.json().catch(() => ({ 
+        detail: 'Failed to delete supplier' 
+      }));
+      throw new Error(error.detail || 'Failed to delete supplier');
     }
+  },
+
+  // Optional: Search suppliers
+  async search(query: string): Promise<Supplier[]> {
+    const headers = authApi.getAuthHeaders();
+    
+    // If you have a search endpoint
+    try {
+      const res = await fetch(
+        `${API_BASE}/staff/suppliers/search/?q=${encodeURIComponent(query)}`,
+        { headers }
+      );
+      
+      if (res.ok) {
+        return res.json();
+      }
+    } catch {
+      // Fall through to client-side filtering
+    }
+    
+    // Fallback to client-side filtering
+    const allSuppliers = await this.list();
+    const lowerQuery = query.toLowerCase();
+    return allSuppliers.filter(supplier =>
+      supplier.name.toLowerCase().includes(lowerQuery) ||
+      (supplier.email && supplier.email.toLowerCase().includes(lowerQuery)) ||
+      (supplier.phone_number && supplier.phone_number.toLowerCase().includes(lowerQuery))
+    );
   },
 };

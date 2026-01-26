@@ -1,9 +1,9 @@
+// components/admin/suppliers/SupplierDetails.tsx - FIXED
 "use client";
 
 import { useState, useEffect } from 'react';
 import { Supplier, Purchase } from './types';
 import { supplierApi } from '@/lib/api/supplierApi';
-//import { purchaseApi } from '@/lib/api/purchaseApi'; // You'll need to create this
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, 
@@ -80,8 +80,11 @@ export default function SupplierDetails({ supplier, onClose, onRefresh }: Suppli
       return;
     }
 
+    // Generate a numeric ID instead of string
+    const newPurchaseId = Date.now(); // This creates a numeric timestamp
+    
     const newPurchase: Purchase = {
-      id: `purchase_${Date.now()}`,
+      id: newPurchaseId, // Now a number instead of string
       supplier_id: supplier.id,
       supplier_name: supplier.name,
       product_name: productName,
@@ -118,7 +121,8 @@ export default function SupplierDetails({ supplier, onClose, onRefresh }: Suppli
     }
   };
 
-  const handleDeletePurchase = async (purchaseId: string) => {
+  // Update handleDeletePurchase to accept number ID
+  const handleDeletePurchase = async (purchaseId: number) => { // Changed to number
     if (!confirm('Are you sure you want to delete this purchase?')) return;
     
     try {
@@ -328,7 +332,7 @@ export default function SupplierDetails({ supplier, onClose, onRefresh }: Suppli
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm">
                                 <button
-                                  onClick={() => handleDeletePurchase(purchase.id)}
+                                  onClick={() => handleDeletePurchase(purchase.id)} // purchase.id is number
                                   className="text-red-600 hover:text-red-900 text-xs font-medium"
                                 >
                                   Delete

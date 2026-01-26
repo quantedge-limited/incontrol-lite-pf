@@ -1,26 +1,27 @@
 export interface Supplier {
-  id: string;  // UUID from backend
+  id: number;  // Changed from string to number since backend uses <int:pk>
   name: string;
   email?: string;
   phone_number?: string;
   address?: string;
-  additional_info?: any; // JSON field from backend
+  additional_info?: any;
   created_at: string;
   updated_at: string;
   created_by?: {
-    id: string;
+    id: string; // This can stay string (user ID might be UUID)
     email: string;
     first_name: string;
     last_name: string;
   };
 }
 
+// Fix: Make all fields optional and allow null
 export interface SupplierFormData {
   name: string;
-  email: string;
-  phone_number: string;
-  address: string;
-  additional_info: string;
+  email?: string | null;  // Allow null
+  phone_number?: string | null;  // Allow null
+  address?: string | null;  // Allow null
+  additional_info?: any | null;  // Allow null (should be object/JSON, not string)
 }
 
 // Helper function to format date
@@ -38,7 +39,6 @@ export const formatAdditionalInfo = (info: any): string => {
   if (typeof info === 'string') return info;
   if (typeof info === 'object') {
     try {
-      // Handle JSON object
       if (info.supplies) return info.supplies;
       if (info.notes) return info.notes;
       if (Array.isArray(info)) return info.join(', ');
@@ -51,8 +51,8 @@ export const formatAdditionalInfo = (info: any): string => {
 };
 
 export interface Purchase {
-  id: string;
-  supplier_id: string;
+  id: number; // Changed from string to number if Django uses <int:pk>
+  supplier_id: number; // Changed from string to number
   supplier_name: string;
   product_name: string;
   quantity: number;

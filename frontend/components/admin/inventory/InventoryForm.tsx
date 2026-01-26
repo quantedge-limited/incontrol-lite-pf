@@ -1,4 +1,4 @@
-// components/admin/inventory/InventoryForm.tsx - FIXED
+// components/admin/inventory/InventoryForm.tsx - UPDATED
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -14,11 +14,8 @@ import {
   Camera,
   Plus,
 } from "lucide-react";
-import { brandApi, Brand } from "@/lib/api/brandApi";
-import { supplierApi, Supplier } from "@/lib/api/supplierApi";
 import { inventoryApi } from "@/lib/api/inventoryApi";
-import type { InventoryFormData } from "./types"; // Import from types
-import { uploadProductImage } from "@/lib/fileUpload";
+import type { InventoryFormData, InventoryCategory } from "./types";
 
 interface InventoryFormProps {
   item?: any;
@@ -31,52 +28,44 @@ export default function InventoryForm({
   onSave,
   onCancel,
 }: InventoryFormProps) {
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [categories, setCategories] = useState<InventoryCategory[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showAddBrand, setShowAddBrand] = useState(false);
-  const [newBrandName, setNewBrandName] = useState("");
-  const [newBrandDescription, setNewBrandDescription] = useState("");
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDescription, setNewCategoryDescription] = useState("");
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Form data matches InventoryFormData type
+  // Form data matches Django serializer fields
   const [formData, setFormData] = useState<InventoryFormData>({
-    name: item?.name || "",
+    brand_name: item?.brand_name || "",
     description: item?.description || "",
-    quantity: item?.quantity || 1,
-    price_per_unit: item?.price_per_unit || 0,
-    received_at: item?.received_at || new Date().toISOString().split("T")[0],
-    expiry_date: item?.expiry_date || undefined, // Change null to undefined
-    supplier_id: item?.supplier?.id || item?.supplier_id || "",
-    brand_id: item?.brand?.id || item?.brand_id || "",
+    quantity_in_stock: item?.quantity_in_stock || 1,
+    selling_price: item?.selling_price || 0,
+    cost_price: item?.cost_price || 0,
+    category: item?.category?.id || item?.category || "",
+    is_active: item?.is_active !== undefined ? item?.is_active : true,
   });
 
   // Separate state for UI-only fields
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>(
-    item?.image_path ? `/images/products/${item.image_path}` : ""
+    item?.image ? `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}${item.image}` : ""
   );
   const [isNewImage, setIsNewImage] = useState(false);
-  const [sku, setSku] = useState(item?.sku || "");
-  const [category, setCategory] = useState(item?.category || "");
 
-  // Load brands & suppliers
+  // Load categories
   useEffect(() => {
-    const loadData = async () => {
+    const loadCategories = async () => {
       try {
-        const [brandsData, suppliersData] = await Promise.all([
-          brandApi.list(),
-          supplierApi.list(),
-        ]);
-        setBrands(brandsData);
-        setSuppliers(suppliersData);
+        const categoriesData = await inventoryApi.getCategories();
+        setCategories(categoriesData);
       } catch (err) {
-        console.error(err);
-        setError("Failed to load brands or suppliers");
+        console.error("Failed to load categories:", err);
+        setError("Failed to load categories");
       }
     };
-    loadData();
+    loadCategories();
   }, []);
 
   // Handle image selection
@@ -109,17 +98,20 @@ export default function InventoryForm({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleAddBrand = async () => {
-    if (!newBrandName.trim()) return setError("Brand name is required");
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return setError("Category name is required");
     try {
-      const newBrand = await brandApi.create(newBrandName, newBrandDescription);
-      setBrands((prev) => [...prev, newBrand]);
-      setFormData((prev) => ({ ...prev, brand_id: newBrand.id })); // Use brand_id
-      setNewBrandName("");
-      setNewBrandDescription("");
-      setShowAddBrand(false);
+      const newCategory = await inventoryApi.createCategory({
+        name: newCategoryName,
+        description: newCategoryDescription,
+      });
+      setCategories((prev) => [...prev, newCategory]);
+      setFormData((prev) => ({ ...prev, category: newCategory.id }));
+      setNewCategoryName("");
+      setNewCategoryDescription("");
+      setShowAddCategory(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create brand");
+      setError(err instanceof Error ? err.message : "Failed to create category");
     }
   };
 
@@ -129,41 +121,52 @@ export default function InventoryForm({
     setError("");
 
     try {
-      let imagePath = item?.image_path;
-
-      // Upload new image if selected
-      if (isNewImage && imageFile) {
-        imagePath = await uploadProductImage(
-          imageFile,
-          item?.id || `temp-${Date.now()}`,
-          formData.name
-        );
-      }
-
-      // Prepare API data - only include fields in InventoryFormData
-      const apiData: InventoryFormData = {
-        ...formData,
-        // Add image_path if we have one (even though it's not in InventoryFormData,
-        // the API might accept it)
-        ...(imagePath && { image_path: imagePath }),
+      // Prepare data for API
+      const apiData: Partial<InventoryFormData> = {
+        brand_name: formData.brand_name,
+        description: formData.description || '',
+        quantity_in_stock: formData.quantity_in_stock,
+        selling_price: formData.selling_price,
+        cost_price: formData.cost_price,
+        is_active: formData.is_active,
       };
 
+      // Add category if provided
+      if (formData.category) {
+        apiData.category = formData.category;
+      }
+
+      // Handle image
+      let imageToSend: File | null | undefined;
+      if (isNewImage) {
+        if (imageFile) {
+          // New image uploaded
+          imageToSend = imageFile;
+        } else if (!imagePreview && item?.image) {
+          // Image was removed
+          imageToSend = null;
+        }
+      }
+
       if (item?.id) {
-        await inventoryApi.update(item.id, apiData);
+        // Update existing item
+        await inventoryApi.update(item.id, apiData, imageToSend);
       } else {
-        await inventoryApi.create(apiData);
+        // Create new item
+        await inventoryApi.create(apiData as InventoryFormData, imageFile || undefined);
       }
 
       onSave();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
+      console.error("Save error:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const calculateTotal = () =>
-    (formData.quantity * formData.price_per_unit).toFixed(2);
+    (formData.quantity_in_stock * formData.cost_price).toFixed(2);
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-emerald-100">
@@ -230,75 +233,47 @@ export default function InventoryForm({
 
         {/* Basic Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Name */}
+          {/* Brand Name (was Product Name) */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Product Name *
+              Brand Name *
             </label>
             <input
               type="text"
-              value={formData.name}
+              value={formData.brand_name}
               onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
+                setFormData({ ...formData, brand_name: e.target.value })
               }
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              placeholder="Enter product name"
+              placeholder="Enter brand name"
               required
             />
           </div>
 
-          {/* SKU (Separate state - not in InventoryFormData) */}
+          {/* Category (not brand) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              SKU (Optional)
-            </label>
-            <input
-              type="text"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              placeholder="e.g., PROD-001"
-            />
-          </div>
-
-          {/* Category (Separate state - not in InventoryFormData) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Category (Optional)
-            </label>
-            <input
-              type="text"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              placeholder="e.g., Electronics, Clothing"
-            />
-          </div>
-
-          {/* Brand & Supplier */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Brand *
+              Category *
             </label>
             <div className="flex gap-2">
               <select
-                value={formData.brand_id || ""}
+                value={formData.category || ""}
                 onChange={(e) =>
-                  setFormData({ ...formData, brand_id: e.target.value })
+                  setFormData({ ...formData, category: e.target.value })
                 }
                 className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 required
               >
-                <option value="">Select a brand</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
+                <option value="">Select a category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
                 ))}
               </select>
               <button
                 type="button"
-                onClick={() => setShowAddBrand(true)}
+                onClick={() => setShowAddCategory(true)}
                 className="px-4 py-3 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" /> New
@@ -306,117 +281,101 @@ export default function InventoryForm({
             </div>
           </div>
 
+          {/* Selling Price */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Supplier *
-            </label>
-            <select
-              value={formData.supplier_id || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, supplier_id: e.target.value })
-              }
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              required
-            >
-              <option value="">Select a supplier</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Quantity */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quantity *
-            </label>
-            <input
-              type="number"
-              min={1}
-              value={formData.quantity}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  quantity: parseInt(e.target.value) || 1,
-                })
-              }
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              required
-            />
-          </div>
-
-          {/* Price */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Price per Unit (KES) *
+              Selling Price (KES) *
             </label>
             <input
               type="number"
               step={0.01}
               min={0}
-              value={formData.price_per_unit}
+              value={formData.selling_price}
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  price_per_unit: parseFloat(e.target.value) || 0,
+                  selling_price: parseFloat(e.target.value) || 0,
                 })
               }
               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               required
             />
           </div>
+
+          {/* Cost Price */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cost Price (KES) *
+            </label>
+            <input
+              type="number"
+              step={0.01}
+              min={0}
+              value={formData.cost_price}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  cost_price: parseFloat(e.target.value) || 0,
+                })
+              }
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              required
+            />
+          </div>
+
+          {/* Quantity in Stock */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Quantity in Stock *
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={formData.quantity_in_stock}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  quantity_in_stock: parseInt(e.target.value) || 0,
+                })
+              }
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              required
+            />
+          </div>
+
+          {/* Active Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
+            <select
+              value={formData.is_active ? "true" : "false"}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  is_active: e.target.value === "true",
+                })
+              }
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
         </div>
 
-        {/* Total */}
+        {/* Total Cost */}
         <div className="md:col-span-2">
           <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
             <div className="flex justify-between items-center">
-              <span className="font-medium text-emerald-800">Total Value</span>
+              <span className="font-medium text-emerald-800">Total Cost</span>
               <span className="text-2xl font-bold text-emerald-900">
                 KES {calculateTotal()}
               </span>
             </div>
             <p className="text-sm text-emerald-600 mt-1">
-              Quantity × Price per Unit
+              Quantity × Cost Price
             </p>
-          </div>
-        </div>
-
-        {/* Dates */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Received Date *
-            </label>
-            <input
-              type="date"
-              value={formData.received_at}
-              onChange={(e) =>
-                setFormData({ ...formData, received_at: e.target.value })
-              }
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Expiry Date (Optional)
-            </label>
-            <input
-              type="date"
-              value={formData.expiry_date || ""}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  expiry_date: e.target.value || undefined, // Change null to undefined
-                })
-              }
-              className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              min={new Date().toISOString().split("T")[0]}
-            />
           </div>
         </div>
 
@@ -432,7 +391,7 @@ export default function InventoryForm({
             }
             rows={3}
             className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
-            placeholder="Add additional details"
+            placeholder="Add product description"
           />
         </div>
 
@@ -456,9 +415,9 @@ export default function InventoryForm({
         </div>
       </form>
 
-      {/* Add Brand Modal */}
+      {/* Add Category Modal */}
       <AnimatePresence>
-        {showAddBrand && (
+        {showAddCategory && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -467,9 +426,9 @@ export default function InventoryForm({
               className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Add New Brand</h3>
+                <h3 className="text-lg font-bold text-gray-900">Add New Category</h3>
                 <button
-                  onClick={() => setShowAddBrand(false)}
+                  onClick={() => setShowAddCategory(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg"
                 >
                   <X className="h-5 w-5 text-gray-500" />
@@ -478,16 +437,16 @@ export default function InventoryForm({
               <div className="space-y-4">
                 <input
                   type="text"
-                  placeholder="Brand Name"
-                  value={newBrandName}
-                  onChange={(e) => setNewBrandName(e.target.value)}
+                  placeholder="Category Name"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   autoFocus
                 />
                 <textarea
-                  placeholder="Brand Description (Optional)"
-                  value={newBrandDescription}
-                  onChange={(e) => setNewBrandDescription(e.target.value)}
+                  placeholder="Category Description (Optional)"
+                  value={newCategoryDescription}
+                  onChange={(e) => setNewCategoryDescription(e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
                   rows={3}
                 />
@@ -495,17 +454,17 @@ export default function InventoryForm({
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddBrand(false)}
+                  onClick={() => setShowAddCategory(false)}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={handleAddBrand}
+                  onClick={handleAddCategory}
                   className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                 >
-                  Add Brand
+                  Add Category
                 </button>
               </div>
             </motion.div>

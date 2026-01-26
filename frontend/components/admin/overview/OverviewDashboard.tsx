@@ -1,14 +1,34 @@
+// components/admin/overview/OverviewDashboard.tsx - COMPLETE VERSION
 "use client";
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import SalesChart from '../sales/SalesChart';
-import { salesApi, SalesStats } from '@/lib/api/salesApi';
+import { salesApi } from '@/lib/api/salesApi';
 import { inventoryApi } from '@/lib/api/inventoryApi';
 
+// Define a local interface for fallback stats
+interface LocalSalesStats {
+  total_revenue: number;
+  recent_revenue: number;
+  total_sales: number;
+  recent_sales: number;
+  avg_order_value: number;
+  monthly_trend: number[];
+  total_profit: number;
+  recent_profit: number;
+  top_products: Array<{
+    name: string;
+    total_quantity: number;
+    total_revenue: number;
+  }>;
+  low_stock_items: number;
+  out_of_stock_items: number;
+}
+
 export default function OverviewDashboard() {
-  const [salesStats, setSalesStats] = useState<SalesStats | null>(null);
+  const [salesStats, setSalesStats] = useState<LocalSalesStats | null>(null);
   const [chartData, setChartData] = useState<{months: string[], totals: number[]}>({months: [], totals: []});
   const [inventoryCount, setInventoryCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -23,44 +43,68 @@ export default function OverviewDashboard() {
       setLoading(true);
       setError('');
 
-      // Fetch all data in parallel
-      const [stats, chart, inventory] = await Promise.all([
-        salesApi.getStats().catch(() => null), // Fallback if endpoint not ready
-        salesApi.getChartData().catch(() => ({ months: [], totals: [] })),
-        inventoryApi.list().catch(() => [])
-      ]);
-
-      setSalesStats(stats);
-      setChartData(chart);
+      // Fetch only available data
+      const inventory = await inventoryApi.list().catch(() => []);
       setInventoryCount(inventory.length);
-    } catch (err) {
-      console.error('Failed to load dashboard:', err);
-      setError('Failed to load dashboard data');
       
-      // Fallback to localStorage for demo
+      // Try to load from localStorage for demo
       const raw = localStorage.getItem('sales_data');
       if (raw) {
         const data = JSON.parse(raw);
-        // Use mock data structure
-        // In your OverviewDashboard.tsx, update the fallback data:
-        setSalesStats({
+        const stats: LocalSalesStats = {
           total_revenue: data.revenue || 0,
           recent_revenue: data.mtd || 0,
           total_sales: data.totalSales || 0,
-          recent_sales: [], // Change from [] to 0
+          recent_sales: data.recentSales || 0,
+          avg_order_value: data.avgOrderValue || 0,
+          monthly_trend: data.monthlyTrend || [],
+          total_profit: data.profit || 0,
+          recent_profit: data.recentProfit || 0,
+          top_products: data.topProducts || [],
+          low_stock_items: data.lowStockItems || 0,
+          out_of_stock_items: data.outOfStockItems || 0,
+        };
+        setSalesStats(stats);
+        
+        const last6 = data.last6months || { months: [], totals: [] };
+        setChartData(last6);
+      } else {
+        // Set default/empty stats
+        const defaultStats: LocalSalesStats = {
+          total_revenue: 0,
+          recent_revenue: 0,
+          total_sales: 0,
+          recent_sales: 0,
           avg_order_value: 0,
           monthly_trend: [],
-          total_profit: data.profit || 0,
+          total_profit: 0,
           recent_profit: 0,
           top_products: [],
           low_stock_items: 0,
           out_of_stock_items: 0,
-          // Remove: recent_sales: [] // Remove this line
-        });
-        
-        const last6 = data.last6months || { months: [], totals: [] };
-        setChartData(last6);
+        };
+        setSalesStats(defaultStats);
+        setChartData({ months: [], totals: [] });
       }
+    } catch (err) {
+      console.error('Failed to load dashboard:', err);
+      setError('Failed to load dashboard data');
+      
+      // Set fallback empty data
+      const fallbackStats: LocalSalesStats = {
+        total_revenue: 0,
+        recent_revenue: 0,
+        total_sales: 0,
+        recent_sales: 0,
+        avg_order_value: 0,
+        monthly_trend: [],
+        total_profit: 0,
+        recent_profit: 0,
+        top_products: [],
+        low_stock_items: 0,
+        out_of_stock_items: 0,
+      };
+      setSalesStats(fallbackStats);
     } finally {
       setLoading(false);
     }
@@ -175,7 +219,7 @@ export default function OverviewDashboard() {
         <Link href="/admin/dashboard/sales" className="block p-4 bg-white border rounded shadow hover:shadow-md">
           <div className="text-sm font-medium text-emerald-700">Sales</div>
           <div className="mt-2 text-lg font-semibold text-emerald-900">
-            {salesStats ? `${salesStats.recent_sales.length} recent` : 'View performance'}
+            {salesStats ? `${salesStats.recent_sales} recent` : 'View performance'}
           </div>
         </Link>
 
@@ -223,7 +267,7 @@ export default function OverviewDashboard() {
           <div className="p-4 bg-white border rounded shadow">
             <div className="text-xs text-gray-500">Recent Activity</div>
             <div className="text-xl font-semibold text-emerald-900">
-              {salesStats.recent_sales.length} sales
+              {salesStats.recent_sales} sales
             </div>
             <div className="text-sm text-gray-600 mt-1">
               Last 30 days

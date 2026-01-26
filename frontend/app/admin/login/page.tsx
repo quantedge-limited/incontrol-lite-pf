@@ -10,11 +10,11 @@ export default function AdminAuthPage() {
   const router = useRouter();
   const [redirectParam, setRedirectParam] = useState<string>('/admin/dashboard/sales');
   
-  // API base URL
+  // API base URL - USE THIS
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
   
   // --- UI & FLOW STATE ---
-  const [step, setStep] = useState<1 | 2>(1); // 1 = Email Input, 2 = OTP Input
+  const [step, setStep] = useState<1 | 2>(1);
   const [loading, setLoading] = useState<boolean>(false); 
   const [email, setEmail] = useState<string>('');
   const [otp, setOtp] = useState<string>('');
@@ -34,7 +34,6 @@ export default function AdminAuthPage() {
     const adminEmail = localStorage.getItem('admin_email');
     
     if (token && adminEmail) {
-      // Already logged in, redirect to intended page or dashboard
       router.push(redirectParam);
     }
   }, [router, redirectParam]);
@@ -52,6 +51,7 @@ export default function AdminAuthPage() {
 
     setLoading(true);
     try {
+      // ✅ Use direct Django URL
       const response = await fetch(`${API_BASE}/staff/request-otp/`, {
         method: 'POST',
         headers: {
@@ -88,6 +88,7 @@ export default function AdminAuthPage() {
 
     setLoading(true);
     try {
+      // ✅ Use direct Django URL
       const response = await fetch(`${API_BASE}/staff/verify-otp/`, {
         method: 'POST',
         headers: {
@@ -102,38 +103,21 @@ export default function AdminAuthPage() {
       const data = await response.json();
 
       if (response.ok) {
-        // Save tokens to localStorage (for client-side use)
+        // ✅ FIXED: Store ONLY in localStorage (remove cookie setting)
         localStorage.setItem('access_token', data.access);
         localStorage.setItem('refresh_token', data.refresh);
         localStorage.setItem('admin_email', email);
         
-        // CRITICAL: Save tokens to cookies (for proxy/middleware)
-        const cookieOptions = `path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
-        
-        // Set access_token cookie (proxy checks for this)
-        document.cookie = `access_token=${data.access}; ${cookieOptions}`;
-        
-        // Also set auth_token cookie (proxy checks for this too)
-        document.cookie = `auth_token=${data.access}; ${cookieOptions}`;
-        
-        // Optional: Set refresh_token cookie
-        document.cookie = `refresh_token=${data.refresh}; ${cookieOptions}`;
-        
-        // Log for debugging
-        console.log('Cookies set:', {
-          access_token: data.access.substring(0, 20) + '...',
-          auth_token: data.access.substring(0, 20) + '...'
-        });
-        
-        // Save admin info if available
+        // ✅ Store admin info
         if (data.admin) {
           localStorage.setItem('admin_info', JSON.stringify(data.admin));
         }
 
         toast.success("Login successful! Redirecting...");
 
+        // ✅ Use router.push for Next.js navigation
         setTimeout(() => {
-          window.location.href = redirectParam;
+          router.push(redirectParam);
         }, 800);
 
       } else {

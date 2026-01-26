@@ -1,8 +1,8 @@
+// components/admin/suppliers/SupplierDashboard.tsx - UPDATED
 "use client";
 
 import { useState, useEffect } from 'react';
 import SupplierForm from './SupplierForm';
-// import SuppliersTable from './SuppliersTable'; // Comment out for now
 import { Supplier } from './types';
 import { supplierApi } from '@/lib/api/supplierApi';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,18 +53,19 @@ export default function SupplierDashboard() {
     const query = searchQuery.toLowerCase();
     const filtered = suppliers.filter(supplier => 
       supplier.name.toLowerCase().includes(query) ||
-      supplier.email?.toLowerCase().includes(query) ||
-      supplier.phone_number?.includes(query) ||
-      supplier.address?.toLowerCase().includes(query) ||
-      JSON.stringify(supplier.additional_info).toLowerCase().includes(query)
+      (supplier.email && supplier.email.toLowerCase().includes(query)) ||
+      (supplier.phone_number && supplier.phone_number.toLowerCase().includes(query)) ||
+      (supplier.address && supplier.address.toLowerCase().includes(query)) ||
+      (supplier.additional_info && JSON.stringify(supplier.additional_info).toLowerCase().includes(query))
     );
     setFilteredSuppliers(filtered);
   }, [searchQuery, suppliers]);
 
-  const handleDelete = async (id: string) => {
+  // FIXED: Changed parameter type from string to number
+  const handleDelete = async (id: number) => {
     if (window.confirm('Are you sure you want to delete this supplier? This action cannot be undone.')) {
       try {
-        await supplierApi.delete(id);
+        await supplierApi.delete(id); // Now passing number instead of string
         fetchSuppliers();
       } catch (error) {
         console.error('Failed to delete supplier:', error);
@@ -159,7 +160,53 @@ export default function SupplierDashboard() {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
-          {/* ... stats cards code ... */}
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Suppliers</p>
+                <p className="text-3xl font-bold text-emerald-700 mt-2">{stats.total}</p>
+              </div>
+              <div className="h-12 w-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">With Email</p>
+                <p className="text-3xl font-bold text-blue-600 mt-2">{stats.withEmail}</p>
+              </div>
+              <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Mail className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">With Phone</p>
+                <p className="text-3xl font-bold text-amber-600 mt-2">{stats.withPhone}</p>
+              </div>
+              <div className="h-12 w-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Phone className="h-6 w-6 text-amber-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Last 30 Days</p>
+                <p className="text-3xl font-bold text-purple-600 mt-2">{stats.recentlyAdded}</p>
+              </div>
+              <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
         </motion.div>
 
         {/* Form Section */}
@@ -180,7 +227,7 @@ export default function SupplierDashboard() {
           )}
         </AnimatePresence>
 
-        {/* Simple Suppliers List (temporary) */}
+        {/* Simple Suppliers List */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -243,6 +290,7 @@ export default function SupplierDashboard() {
                         >
                           Edit
                         </button>
+                        {/* FIXED: Passing supplier.id (which is a number) */}
                         <button
                           onClick={() => handleDelete(supplier.id)}
                           className="p-1.5 text-red-600 hover:bg-red-50 rounded"
@@ -294,9 +342,92 @@ export default function SupplierDashboard() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+                className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
               >
-                {/* Modal content... */}
+                <div className="px-8 py-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-gray-900">{selectedSupplier.name}</h2>
+                    <button
+                      onClick={handleCloseModal}
+                      className="text-gray-400 hover:text-gray-600 text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+
+                <div className="px-8 py-6 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedSupplier.email && (
+                        <div>
+                          <p className="text-sm text-gray-600">Email</p>
+                          <p className="text-gray-900">{selectedSupplier.email}</p>
+                        </div>
+                      )}
+                      {selectedSupplier.phone_number && (
+                        <div>
+                          <p className="text-sm text-gray-600">Phone</p>
+                          <p className="text-gray-900">{selectedSupplier.phone_number}</p>
+                        </div>
+                      )}
+                      {selectedSupplier.address && (
+                        <div>
+                          <p className="text-sm text-gray-600">Address</p>
+                          <p className="text-gray-900">{selectedSupplier.address}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {selectedSupplier.additional_info && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Additional Information</h3>
+                      <pre className="bg-gray-50 p-4 rounded-lg text-sm whitespace-pre-wrap">
+                        {JSON.stringify(selectedSupplier.additional_info, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+
+                  <div className="pt-6 border-t border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Metadata</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Created On</p>
+                        <p className="text-gray-900">
+                          {new Date(selectedSupplier.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Last Updated</p>
+                        <p className="text-gray-900">
+                          {new Date(selectedSupplier.updated_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-8 py-6 border-t border-gray-200 bg-gray-50">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => {
+                        handleEdit(selectedSupplier);
+                        handleCloseModal();
+                      }}
+                      className="px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700"
+                    >
+                      Edit Supplier
+                    </button>
+                    <button
+                      onClick={handleCloseModal}
+                      className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
               </motion.div>
             </div>
           )}

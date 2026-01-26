@@ -1,9 +1,9 @@
 "use client";
 
-import { Sale } from "@/lib/api/salesApi";
+import { Order } from "@/lib/api/salesApi";
 
 interface SalesTableProps {
-  sales: Sale[];
+  sales: Order[];
 }
 
 export default function SalesTable({ sales }: SalesTableProps) {
@@ -27,7 +27,7 @@ export default function SalesTable({ sales }: SalesTableProps) {
               Customer
             </th>
             <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-              Type
+              Status
             </th>
             <th className="px-6 py-3 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">
               Items
@@ -38,14 +38,14 @@ export default function SalesTable({ sales }: SalesTableProps) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {sales.map((sale) => (
-            <tr key={sale.id} className="hover:bg-gray-50 transition-colors">
+          {sales.map((order) => (
+            <tr key={order.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-medium text-gray-900">
-                  {new Date(sale.created_at).toLocaleDateString()}
+                  {new Date(order.created_at).toLocaleDateString()}
                 </div>
                 <div className="text-[10px] text-gray-500">
-                  {new Date(sale.created_at).toLocaleTimeString([], { 
+                  {new Date(order.created_at).toLocaleTimeString([], { 
                     hour: '2-digit', 
                     minute: '2-digit' 
                   })}
@@ -53,31 +53,33 @@ export default function SalesTable({ sales }: SalesTableProps) {
               </td>
               <td className="px-6 py-4">
                 <div className="text-sm text-gray-900">
-                  {sale.buyer_name || (sale.client ? sale.client.name : "Guest")}
+                  {order.customer_name || "Guest"}
                 </div>
-                {sale.buyer_phone && (
+                {order.customer_phone && (
                   <div className="text-[10px] text-gray-500">
-                    {sale.buyer_phone}
+                    {order.customer_phone}
                   </div>
                 )}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${
-                  sale.sale_type === 'online' 
-                    ? 'bg-blue-100 text-blue-800' 
-                    : 'bg-emerald-100 text-emerald-800'
+                  order.status === 'paid' 
+                    ? 'bg-green-100 text-green-800' 
+                    : order.status === 'pending'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
                 }`}>
-                  {sale.sale_type.toUpperCase()}
+                  {order.status.toUpperCase()}
                 </span>
               </td>
               <td className="px-6 py-4">
                 <div className="text-sm text-gray-900">
-                  {sale.items.length} items
+                  {order.items.length} items
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-bold text-emerald-700">
-                  KES {sale.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  KES {order.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </div>
               </td>
             </tr>

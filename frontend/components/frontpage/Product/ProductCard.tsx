@@ -1,34 +1,32 @@
-// components/frontpage/Product/ProductCard.tsx - VERIFY EXPORT
+// components/frontpage/Product/ProductCard.tsx - UPDATED
 'use client';
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 
 interface ProductCardProps {
   id: string;
-  name: string;
-  price: number;
-  description: string;
+  name: string;  // Changed back to match ProductsList
+  price: number;  // Changed back to match ProductsList
+  description?: string;
+  quantity: number;  // Changed back to match ProductsList
   inStock: boolean;
-  image_path: string | null;
-  quantity: number;
-  brand: string;
-  supplier?: string;
+  image?: string;
+  category?: string;  // Changed from object to string
+  is_active: boolean;
   onAddToCart?: (product: any) => void;
 }
 
-// Make sure this is exported correctly
 export const ProductCard: React.FC<ProductCardProps> = ({
   id,
   name,
   price,
   description,
-  inStock,
-  image_path,
   quantity,
-  brand,
-  supplier,
+  inStock,
+  image,
+  category,
+  is_active,
   onAddToCart,
 }) => {
   const handleAddToCart = () => {
@@ -37,17 +35,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       name,
       price,
       description,
-      inStock,
-      image_path,
       quantity,
-      brand,
-      supplier,
+      inStock,
+      image_path: image,
+      brand: name,
+      category,
     };
     
     if (onAddToCart) {
       onAddToCart(product);
     }
   };
+
+  // Build image URL if it's a relative path
+  const imageUrl = image 
+    ? image.startsWith('http') 
+      ? image 
+      : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}${image}`
+    : null;
+
+  // Add safety check for price
+  const displayPrice = price || 0;
 
   return (
     <motion.div
@@ -56,13 +64,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     >
       {/* Product Image */}
       <div className="relative h-48 bg-gray-100">
-        {image_path ? (
-          <Image
-            src={image_path}
+        {imageUrl ? (
+          <img
+            src={imageUrl}
             alt={name}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -78,11 +84,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         
         <div className="flex justify-between items-center mb-3">
           <span className="font-bold text-[#0091AD] text-xl">
-            KES {price.toLocaleString()}
+            KES {displayPrice.toLocaleString()}
           </span>
-          {brand && (
+          {category && (
             <span className="text-sm bg-[#e6f7fb] text-[#0091AD] px-2 py-1 rounded">
-              {brand}
+              {category}
             </span>
           )}
         </div>
@@ -99,14 +105,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Add to Cart Button */}
         <button
           onClick={handleAddToCart}
-          disabled={!inStock}
+          disabled={!inStock || !is_active}
           className={`w-full py-2 rounded-lg font-medium ${
-            inStock
+            inStock && is_active
               ? 'bg-[#0091AD] text-white hover:bg-[#007a91]'
               : 'bg-gray-200 text-gray-500 cursor-not-allowed'
           }`}
         >
-          {inStock ? 'Add to Cart' : 'Out of Stock'}
+          {!is_active ? 'Inactive' : inStock ? 'Add to Cart' : 'Out of Stock'}
         </button>
       </div>
     </motion.div>

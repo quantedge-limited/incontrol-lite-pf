@@ -1,119 +1,225 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
-function authHeaders(extra: HeadersInit = {}): HeadersInit {
+import { authApi } from './authApi';
+
+// Helper to check authentication before making requests
+function checkAuth(): void {
+  if (!authApi.isAuthenticated()) {
+    throw new Error('Not authenticated. Please login first.');
+  }
+}
+
+// Helper to get auth token
+function getAuthToken(): string {
   const token = localStorage.getItem('access_token');
   if (!token) {
     throw new Error('Not authenticated');
   }
-
-  return {
-    'Authorization': `Bearer ${token}`,
-    ...extra,
-  };
+  return token;
 }
 
-
-export interface InventoryFormData {
-  name: string;
-  description?: string;
-  quantity: number;
-  price_per_unit: number;
-  received_at: string;
-  expiry_date?: string;
-  supplier_id?: string;
-  brand_id?: string;
-  sku?: string;
-  category?: string;
-  image_url?: string;
-  image_path?: string;
-}
-
-// Also export InventoryItem if not already
 export interface InventoryItem {
   id: string;
-  name: string;
+  brand_name: string;
   description?: string;
-  quantity: number;
-  price_per_unit: number;
-  total_value: number;
-  received_at: string;
-  expiry_date?: string;
-  supplier_id?: string;
-  supplier_name?: string;
-  brand_id?: string;
-  brand_name?: string;
+  quantity_in_stock: number;
+  selling_price: number;
+  cost_price: number;
+  category: string;  // Category ID
+  category_details?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
+  image?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  image_url?: string;
-  image_path?: string;
-  image?: string;
-  sku?: string;
-  category?: string;
 }
 
-
+export interface InventoryFormData {
+  brand_name: string;
+  description?: string;
+  quantity_in_stock: number;
+  selling_price: number;
+  cost_price: number;
+  category: string;  // Category ID
+  image?: string;
+  is_active?: boolean;
+}
 
 export const inventoryApi = {
-  async create(itemData: InventoryFormData): Promise<InventoryItem> {
-    const res = await fetch(`${API_BASE}/inventory/create/`, {
-      method: 'POST',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify(itemData),
+  // Create inventory item (requires authentication)
+  async create(itemData: InventoryFormData, imageFile?: File): Promise<InventoryItem> {
+    checkAuth();
+    
+    const formData = new FormData();
+    
+    // Add all fields
+    Object.entries(itemData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
     });
+    
+    // Add image if exists
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+    
+    const token = getAuthToken();
+    
+    const res = await fetch(`${API_BASE}/inventory/items/create/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // No Content-Type header for FormData
+      },
+      body: formData,
+    });
+    
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.detail || 'Failed to create inventory item');
+      throw new Error(
+        error.detail || 
+        Object.values(error).flat().join(', ') || 
+        'Failed to create item'
+      );
     }
+    
     return res.json();
   },
 
+  // List inventory items (public - no auth required)
   async list(): Promise<InventoryItem[]> {
-    const res = await fetch(`${API_BASE}/inventory/`, {
-      headers: authHeaders(),
-      credentials: 'include', // needed if using session cookies
+    const res = await fetch(`${API_BASE}/inventory/items/`, {
+      headers: { 'Content-Type': 'application/json' },
     });
-
-    if (!res.ok) throw new Error('Failed to fetch inventory items');
+    
+    if (!res.ok) {
+      throw new Error('Failed to fetch inventory items');
+    }
+    
     return res.json();
   },
 
+  // Get single item (public - no auth required)
   async get(id: string): Promise<InventoryItem> {
-    const res = await fetch(`${API_BASE}/inventory/${id}/`, {
-      headers: authHeaders(),
+    const res = await fetch(`${API_BASE}/inventory/items/${id}/`, {
+      headers: { 'Content-Type': 'application/json' },
     });
-    if (!res.ok) throw new Error('Failed to fetch inventory item');
+    
+    if (!res.ok) {
+      if (res.status === 404) {
+        throw new Error('Inventory item not found');
+      }
+      throw new Error('Failed to fetch inventory item');
+    }
+    
     return res.json();
   },
 
-  async update(id: string, itemData: Partial<InventoryFormData>): Promise<InventoryItem> {
-    const res = await fetch(`${API_BASE}/inventory/${id}/update/`, {
+  // Update item (requires authentication) - FIXED: Use FormData for updates too
+  async update(id: string, itemData: Partial<InventoryFormData>, imageFile?: File | null): Promise<InventoryItem> {
+    checkAuth();
+    
+    const formData = new FormData();
+    
+    // Add all fields that are provided
+    Object.entries(itemData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        formData.append(key, value.toString());
+      }
+    });
+    
+    // Handle image
+    if (imageFile !== undefined) {
+      if (imageFile === null) {
+        // Send empty string to clear image
+        formData.append('image', '');
+      } else if (imageFile instanceof File) {
+        // Send new image file
+        formData.append('image', imageFile);
+      }
+    }
+    
+    const token = getAuthToken();
+    
+    const res = await fetch(`${API_BASE}/inventory/items/${id}/update/`, {
       method: 'PUT',
-      headers: authHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify(itemData),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
     });
-    if (!res.ok) throw new Error('Failed to update inventory item');
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(
+        error.detail || 
+        Object.values(error).flat().join(', ') || 
+        'Failed to update item'
+      );
+    }
+    
     return res.json();
   },
 
+  // Delete item (requires authentication)
   async delete(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/inventory/${id}/delete/`, {
+    checkAuth();
+    
+    const token = getAuthToken();
+    
+    const res = await fetch(`${API_BASE}/inventory/items/${id}/delete/`, {
       method: 'DELETE',
-      headers: authHeaders(),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
     });
-    if (!res.ok) throw new Error('Failed to delete inventory item');
+    
+    if (!res.ok) {
+      if (res.status === 404) {
+        throw new Error('Item not found');
+      }
+      throw new Error('Failed to delete inventory item');
+    }
   },
 
-  // Public endpoints (no auth)
-  async getCustomerProducts(): Promise<InventoryItem[]> {
-    const res = await fetch(`${API_BASE}/inventory/customer/products/`);
-    if (!res.ok) throw new Error('Failed to fetch products');
+  // Get categories
+  async getCategories() {
+    const res = await fetch(`${API_BASE}/inventory/categories/`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to fetch categories');
+    }
+    
     return res.json();
   },
 
-  async getCustomerProduct(id: string): Promise<InventoryItem> {
-    const res = await fetch(`${API_BASE}/inventory/customer/products/${id}/`);
-    if (!res.ok) throw new Error('Failed to fetch product');
+  // Create category (requires auth)
+  async createCategory(categoryData: { name: string; description?: string }) {
+    checkAuth();
+    
+    const token = getAuthToken();
+    
+    const res = await fetch(`${API_BASE}/inventory/categories/create/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(categoryData),
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to create category');
+    }
+    
     return res.json();
   },
 };

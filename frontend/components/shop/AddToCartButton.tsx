@@ -2,15 +2,18 @@
 
 import { useState } from 'react';
 import { ShoppingCart, Check } from 'lucide-react';
-import { useCart } from '@/context/cart/CartContext';
+import { salesApi, CartItem } from '@/lib/api/salesApi';
+import { toast } from 'react-hot-toast';
 
 interface AddToCartButtonProps {
-  productId: number; // This should be inventoryId based on your context
+  productId: string; // Changed from number to string to match inventory_id
   productName: string;
   price: number;
   imagePath?: string | null;
   className?: string;
   showLabel?: boolean;
+  stock?: number;
+  inventoryId?: string; // Alternative prop name for clarity
 }
 
 export default function AddToCartButton({
@@ -20,22 +23,48 @@ export default function AddToCartButton({
   imagePath = null,
   className = '',
   showLabel = true,
+  stock = 1,
+  inventoryId, // Optional alternative
 }: AddToCartButtonProps) {
-  const { addItem, loading } = useCart(); // Changed from addToCart to addItem, isLoading to loading
+  const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
 
   const handleAddToCart = async () => {
+    // Check stock
+    if (stock <= 0) {
+      toast.error('This item is out of stock');
+      return;
+    }
+
+    // Use inventoryId if provided, otherwise use productId
+    const inventory_id = inventoryId || productId;
+
     try {
-      // Use addItem from context with inventoryId
-      await addItem(productId, 1); // Default quantity to 1
+      setLoading(true);
       
+      // Create cart item
+      const cartItem: CartItem = {
+        inventory_id: inventory_id,
+        inventory_name: productName,
+        quantity: 1,
+        price_per_unit: price,
+        total_price: price,
+      };
+
+      // Add to cart using localStorage
+      const updatedCart = salesApi.addToCart(cartItem);
+      
+      toast.success(`${productName} added to cart!`);
       setAdded(true);
       
       // Reset added state after 2 seconds
       setTimeout(() => setAdded(false), 2000);
+      
     } catch (error) {
-      // Error is already handled in context
       console.error('Failed to add to cart:', error);
+      toast.error('Failed to add to cart');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,10 +83,16 @@ export default function AddToCartButton({
   return (
     <button
       onClick={handleAddToCart}
-      disabled={loading}
+      disabled={loading || stock <= 0}
       className={buttonClasses}
+      title={stock <= 0 ? 'Out of stock' : `Add ${productName} to cart`}
     >
-      {added ? (
+      {loading ? (
+        <>
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          {showLabel && <span>Adding...</span>}
+        </>
+      ) : added ? (
         <>
           <Check size={18} />
           {showLabel && <span>Added!</span>}

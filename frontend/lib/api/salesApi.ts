@@ -1,97 +1,60 @@
+// lib/api/salesApi.ts - UPDATED to match Django backend
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
-export interface SalesStats {
-  total_revenue: number;
-  recent_revenue: number;
-  total_sales: number;
-  avg_order_value: number;
-  monthly_trend: number[];
-  total_profit: number;
-  recent_profit: number;
-  top_products: Array<{
-    inventory__name: string;
-    total_quantity: number;
-    total_revenue: number;
-  }>;
-  low_stock_items: number;
-  out_of_stock_items: number;
-  recent_sales: Array<{
+// Update interfaces to match Django models
+export interface OrderItem {
+  id?: string;
+  product_name: string;
+  unit_price: number;
+  quantity: number;
+  total_price: number;
+  inventory_item?: {
     id: string;
-    date: string;
-    type: string;
-    amount: number;
-    client: string;
-    items_count: number;
-  }>;
+    name: string;
+  };
 }
 
-export interface ChartData {
-  months: string[];
-  totals: number[];
-  counts: number[];
-}
-
-export interface Sale {
+export interface Order {
   id: string;
-  client?: { id: string; name: string };
-  buyer_name?: string;
-  buyer_email?: string;
-  buyer_phone?: string;
-  sale_type: string;
-  total_amount: number;
-  notes?: string;
-  items: Array<{
-    id: string;
-    inventory: { id: string; name: string };
-    quantity: number;
-    price_per_unit: number;
-    total_price: number;
-  }>;
-  created_by?: { id: string; name: string };
+  reference: string;
+  status: 'pending' | 'paid' | 'cancelled';
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  subtotal: number;
+  items: OrderItem[];
   created_at: string;
-  updated_at: string;
 }
 
+export interface CreateOrderDto {
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  items: Array<{
+    inventory_id: string;  // Changed from "inventory" to "inventory_id" to match Django
+    quantity: number;
+  }>;
+}
+
+// For frontend cart (if you're maintaining a local cart)
 export interface CartItem {
-  id: string;
-  inventory_id: number;
+  inventory_id: string;
   inventory_name: string;
   quantity: number;
   price_per_unit: number;
   total_price: number;
 }
 
-export interface Cart {
-  id: string;
-  session_id: string;
-  items: CartItem[];
-  total_price: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CheckoutDto {
-  buyer_name: string;
-  buyer_email: string;
-  buyer_phone: string;
-  buyer_address: string;
-  sale_type: 'online';
-  notes?: string;
-}
-
-export interface CreateSaleDto {
-  client?: string;
-  buyer_name?: string;
-  buyer_email?: string;
-  buyer_phone?: string;
-  buyer_address?: string;
-  sale_type: 'online' | 'walkin';
-  total_amount: number;
-  notes?: string;
-  items: Array<{
-    inventory: string;
-    quantity: number;
-    price_per_unit: number;
+// Stats interface (if you have stats endpoint)
+export interface SalesStats {
+  total_revenue: number;
+  total_orders: number;
+  recent_orders: number;
+  avg_order_value: number;
+  top_products: Array<{
+    name: string;
+    total_quantity: number;
+    total_revenue: number;
   }>;
 }
 
@@ -100,40 +63,25 @@ export interface CreateSaleDto {
 // -------------------
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {},
-  requireAuth: boolean = true
+  options: RequestInit = {}
 ): Promise<T> {
-  // Create headers as a plain object
-  const headersObj: Record<string, string> = { 
+  // Get auth token if available
+  const token = localStorage.getItem('access_token');
+  
+  const headers: Record<string, string> = { 
     'Content-Type': 'application/json',
   };
 
-  // Add any headers from options
-  if (options.headers) {
-    if (Array.isArray(options.headers)) {
-      options.headers.forEach(([key, value]) => {
-        headersObj[key] = value;
-      });
-    } else if (options.headers instanceof Headers) {
-      options.headers.forEach((value, key) => {
-        headersObj[key] = value;
-      });
-    } else {
-      Object.assign(headersObj, options.headers);
-    }
-  }
-
-  // Add auth header if required
-  if (requireAuth) {
-    const token = localStorage.getItem('access_token');
-    if (!token) throw new Error('Authentication token missing');
-    headersObj['Authorization'] = `Bearer ${token}`;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers: headersObj,
-    credentials: 'include', // for session cookies
+    headers: {
+      ...headers,
+      ...(options.headers || {}),
+    },
   });
 
   if (!response.ok) {
@@ -141,80 +89,141 @@ async function apiRequest<T>(
     try {
       error = await response.json();
     } catch {
-      error = { detail: 'Network error' };
+      error = { detail: `HTTP ${response.status}: ${response.statusText}` };
     }
-    throw new Error(error.detail || `HTTP ${response.status}`);
+    throw new Error(error.detail || error.message || 'Request failed');
+  }
+
+  // Handle empty responses (like for DELETE)
+  if (response.status === 204) {
+    return {} as T;
   }
 
   return response.json();
 }
 
 // -------------------
-// SALES API
+// SALES/ORDERS API
 // -------------------
 export const salesApi = {
-  // Dashboard stats
-  getStats: () => apiRequest<SalesStats>('/sales/stats/'),
-
-  getChartData: () => apiRequest<ChartData>('/sales/chart-data/'),
-
-  list: () => apiRequest<Sale[]>('/sales/'),
-
-  create: (saleData: CreateSaleDto) =>
-    apiRequest<Sale>('/sales/create/', { 
-      method: 'POST', 
-      body: JSON.stringify(saleData) 
+  // Create a new order (checkout)
+  createOrder: (orderData: CreateOrderDto): Promise<Order> =>
+    apiRequest<Order>('/sales/checkout/', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
     }),
 
-  get: (id: string) => apiRequest<Sale>(`/sales/${id}/`),
+  // Get all orders
+  getOrders: (): Promise<Order[]> =>
+    apiRequest<Order[]>('/sales/orders/'),
 
-  delete: (id: string) =>
-    apiRequest<void>(`/sales/${id}/delete/`, { 
-      method: 'DELETE' 
+  // Get single order
+  getOrder: (id: string): Promise<Order> =>
+    apiRequest<Order>(`/sales/orders/${id}/`),
+
+  // Delete order (if needed)
+  deleteOrder: (id: string): Promise<void> =>
+    apiRequest<void>(`/sales/orders/${id}/`, {
+      method: 'DELETE',
     }),
 
+  // Get sales statistics (if you have this endpoint)
+  getStats: (): Promise<SalesStats> =>
+    apiRequest<SalesStats>('/sales/stats/'),
+
   // -------------------
-  // CART API (guest-friendly)
+  // CART MANAGEMENT (Frontend-only, since Django doesn't have cart endpoints)
   // -------------------
-  getCart: () => apiRequest<Cart>('/sales/cart/', {}, false),
+  
+  // Get cart from localStorage
+  getCartFromStorage: (): CartItem[] => {
+    if (typeof window === 'undefined') return [];
+    const cartJson = localStorage.getItem('cart');
+    return cartJson ? JSON.parse(cartJson) : [];
+  },
 
-  addToCart: (inventoryId: number, quantity: number = 1) =>
-    apiRequest<Cart>(  // Changed from CartItem to Cart if backend returns full cart
-      '/sales/cart/',
-      { 
-        method: 'POST', 
-        body: JSON.stringify({ inventory_id: inventoryId, quantity }) 
-      },
-      false
-    ),
+  // Save cart to localStorage
+  saveCartToStorage: (cart: CartItem[]): void => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('cart', JSON.stringify(cart));
+  },
 
-  updateCartItem: (itemId: string, quantity: number) =>
-    apiRequest<Cart>(  // Changed from CartItem to Cart if backend returns full cart
-      `/sales/cart/items/${itemId}/`,
-      { 
-        method: 'PUT', 
-        body: JSON.stringify({ quantity }) 
-      },
-      false
-    ),
+  // Add item to cart (local storage)
+  addToCart: (item: CartItem): CartItem[] => {
+    const cart = salesApi.getCartFromStorage();
+    const existingItemIndex = cart.findIndex(
+      (ci) => ci.inventory_id === item.inventory_id
+    );
 
-  removeCartItem: (itemId: string) =>
-    apiRequest<void>(
-      `/sales/cart/items/${itemId}/`, 
-      { method: 'DELETE' }, 
-      false
-    ),
+    if (existingItemIndex >= 0) {
+      // Update existing item
+      cart[existingItemIndex].quantity += item.quantity;
+      cart[existingItemIndex].total_price = 
+        cart[existingItemIndex].quantity * cart[existingItemIndex].price_per_unit;
+    } else {
+      // Add new item
+      cart.push(item);
+    }
 
-  clearCart: () =>
-    apiRequest<void>('/sales/cart/', { method: 'DELETE' }, false),
+    salesApi.saveCartToStorage(cart);
+    return cart;
+  },
 
-  checkout: (checkoutData: CheckoutDto) =>
-    apiRequest<Sale>(
-      '/sales/checkout/', 
-      { 
-        method: 'POST', 
-        body: JSON.stringify(checkoutData) 
-      }, 
-      false
-    ),
+  // Update cart item quantity
+  updateCartItem: (inventoryId: string, quantity: number): CartItem[] => {
+    const cart = salesApi.getCartFromStorage();
+    const itemIndex = cart.findIndex((ci) => ci.inventory_id === inventoryId);
+
+    if (itemIndex >= 0) {
+      if (quantity <= 0) {
+        // Remove item if quantity is 0 or negative
+        cart.splice(itemIndex, 1);
+      } else {
+        // Update quantity
+        cart[itemIndex].quantity = quantity;
+        cart[itemIndex].total_price = quantity * cart[itemIndex].price_per_unit;
+      }
+    }
+
+    salesApi.saveCartToStorage(cart);
+    return cart;
+  },
+
+  // Remove item from cart
+  removeCartItem: (inventoryId: string): CartItem[] => {
+    const cart = salesApi.getCartFromStorage();
+    const filteredCart = cart.filter((ci) => ci.inventory_id !== inventoryId);
+    salesApi.saveCartToStorage(filteredCart);
+    return filteredCart;
+  },
+
+  // Clear entire cart
+  clearCart: (): void => {
+    salesApi.saveCartToStorage([]);
+  },
+
+  // Calculate cart total
+  calculateCartTotal: (cart: CartItem[]): number => {
+    return cart.reduce((total, item) => total + item.total_price, 0);
+  },
 };
+
+// Helper to transform frontend cart to order data
+export function transformCartToOrderData(
+  cart: CartItem[],
+  customerData: {
+    name: string;
+    phone: string;
+    email?: string;
+  }
+): CreateOrderDto {
+  return {
+    customer_name: customerData.name,
+    customer_phone: customerData.phone,
+    customer_email: customerData.email,
+    items: cart.map(item => ({
+      inventory_id: item.inventory_id,
+      quantity: item.quantity,
+    })),
+  };
+}

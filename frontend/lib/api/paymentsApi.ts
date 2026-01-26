@@ -1,90 +1,140 @@
+// lib/api/paymentsApi.ts
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
-
-import { authApi } from './authApi'; // Add this import
 
 export interface Payment {
   id: string;
-  sale: {
-    id: string;
-    total_amount: number;
-  };
-  client?: {
-    id: string;
-    name: string;
-  };
-  amount: number;
+  order: string; // This is the order ID (UUID)
   phone_number: string;
-  payment_method: 'mpesa' | 'cash' | 'card' | 'bank_transfer';
-  status: 'pending' | 'success' | 'failed';
-  stk_request_id?: string;
-  checkout_time?: string;
-  completed_at?: string;
-  created_by?: {
-    id: string;
-    name: string;
-  };
+  amount: number;
+  status: string;
+  mpesa_receipt_number?: string;
   created_at: string;
-  updated_at: string;
 }
 
-export interface CreatePaymentDto {
-  sale_id?: string;
-  client_id?: string;
-  amount: number;
+export interface InitiatePaymentRequest {
+  order_id: string; // UUID string
   phone_number: string;
-  payment_method: 'mpesa' | 'cash' | 'card' | 'bank_transfer';
 }
 
-// Helper function for API requests
+export interface InitiatePaymentResponse {
+  success: boolean;
+  message: string;
+  checkout_request_id?: string;
+  merchant_request_id?: string;
+  payment?: Payment;
+}
+
+export interface PaymentStatusResponse {
+  success: boolean;
+  message: string;
+  payment: Payment;
+}
+
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // Use authApi.getAuthHeaders() for consistent authentication
-  const authHeaders = authApi.getAuthHeaders();
+  // Get auth token if available
+  const token = localStorage.getItem('access_token');
   
-  // Merge headers properly
-  const headers: HeadersInit = {
-    ...authHeaders,
-    ...options.headers,
+  const headers: Record<string, string> = { 
+    'Content-Type': 'application/json',
   };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers,
+    headers: {
+      ...headers,
+      ...(options.headers || {}),
+    },
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Network error' }));
-    throw new Error(error.detail || `HTTP ${response.status}`);
+    let error: any;
+    try {
+      error = await response.json();
+    } catch {
+      error = { detail: `HTTP ${response.status}: ${response.statusText}` };
+    }
+    throw new Error(error.detail || error.message || 'Payment request failed');
+  }
+
+  // Handle empty responses (like for DELETE)
+  if (response.status === 204) {
+    return {} as T;
   }
 
   return response.json();
 }
 
 export const paymentsApi = {
-  // Create payment
-  async create(paymentData: CreatePaymentDto): Promise<Payment> {
-    return apiRequest<Payment>('/payments/', {
+  // Initiate M-Pesa payment
+  initiatePayment: (paymentData: InitiatePaymentRequest): Promise<InitiatePaymentResponse> =>
+    apiRequest<InitiatePaymentResponse>('/payments/initiate/', {
       method: 'POST',
       body: JSON.stringify(paymentData),
-    });
-  },
+    }),
+
+  // Check payment status by order ID
+  checkPaymentStatus: (orderId: string): Promise<PaymentStatusResponse> =>
+    apiRequest<PaymentStatusResponse>(`/payments/status/${orderId}/`, {
+      method: 'GET',
+    }),
+
+  // Get payment by ID
+  getPayment: (paymentId: string): Promise<Payment> =>
+    apiRequest<Payment>(`/payments/${paymentId}/`, {
+      method: 'GET',
+    }),
 
   // Get all payments
-  async list(): Promise<Payment[]> {
-    return apiRequest<Payment[]>('/payments/');
-  },
+  getPayments: (): Promise<Payment[]> =>
+    apiRequest<Payment[]>('/payments/', {
+      method: 'GET',
+    }),
 
-  // Get single payment
-  async get(id: string): Promise<Payment> {
-    return apiRequest<Payment>(`/payments/${id}/`);
-  },
-
-  // Delete payment
-  async delete(id: string): Promise<void> {
-    return apiRequest<void>(`/payments/${id}/delete/`, {
-      method: 'DELETE',
-    });
-  },
+  // Note: The M-Pesa callback endpoint is for backend use only
+  // Frontend doesn't call this directly
 };
+
+// Helper function to poll payment status (for real-time updates)
+export async function pollPaymentStatus(
+  orderId: string,
+  interval = 5000,
+  maxAttempts = 12
+): Promise<PaymentStatusResponse> {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    
+    const poll = async () => {
+      attempts++;
+      
+      try {
+        const response = await paymentsApi.checkPaymentStatus(orderId);
+        
+        // If payment is completed or failed, resolve
+        if (response.payment.status === 'completed' || 
+            response.payment.status === 'failed' ||
+            attempts >= maxAttempts) {
+          resolve(response);
+        } else {
+          // Continue polling
+          setTimeout(poll, interval);
+        }
+      } catch (error) {
+        // If we've reached max attempts or got an error, reject
+        if (attempts >= maxAttempts) {
+          reject(new Error('Payment status polling timeout'));
+        } else {
+          setTimeout(poll, interval);
+        }
+      }
+    };
+    
+    poll();
+  });
+}

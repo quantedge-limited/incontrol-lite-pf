@@ -1,9 +1,11 @@
+// components/admin/inventory/LowStockAlert.tsx - CORRECTED
 "use client";
 
 import { Product } from './types';
 
 export default function LowStockAlert({ products, threshold = 5 }: { products: Product[]; threshold?: number }) {
-  const low = products.filter((p) => p.quantity <= threshold);
+  // Use quantity_in_stock instead of quantity
+  const low = products.filter((p) => p.quantity_in_stock <= threshold);
   if (low.length === 0) return null;
 
   return (
@@ -19,10 +21,14 @@ export default function LowStockAlert({ products, threshold = 5 }: { products: P
         {low.map((p) => (
           <li key={p.id} className="flex items-center justify-between bg-amber-100/50 px-3 py-2 rounded">
             <div>
-              <div className="font-medium">{p.name}</div>
-              <div className="text-xs text-amber-700">{p.brand || p.supplier || ''}</div>
+              {/* Use brand_name since that's what your Product interface has */}
+              <div className="font-medium">{p.brand_name}</div>
+              {/* Remove brand and supplier since they don't exist in Product interface */}
+              <div className="text-xs text-amber-700">
+                Price: KES {p.selling_price?.toLocaleString() || '0'}
+              </div>
             </div>
-            <div className="text-sm font-semibold">{p.quantity}</div>
+            <div className="text-sm font-semibold">{p.quantity_in_stock} units</div>
           </li>
         ))}
       </ul>

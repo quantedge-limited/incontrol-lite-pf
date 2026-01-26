@@ -1,13 +1,14 @@
+// components/admin/suppliers/SupplierTable.tsx - FIXED
 "use client";
 
 import { Supplier } from './types';
-import { Building2, Phone, Mail, MapPin, Package } from 'lucide-react';
+import { Building2, Phone, Mail, MapPin } from 'lucide-react';
 
 interface SuppliersTableProps {
   suppliers: Supplier[];
   onView: (supplier: Supplier) => void;
   onEdit: (supplier: Supplier) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void; // Changed from string to number
   onSearch: (query: string) => void;
 }
 
@@ -110,7 +111,7 @@ export default function SuppliersTable({
                       Edit
                     </button>
                     <button
-                      onClick={() => onDelete(supplier.id)}
+                      onClick={() => onDelete(supplier.id)} // supplier.id is number
                       className="px-3 py-1 text-xs font-medium text-red-700 bg-red-50 rounded hover:bg-red-100"
                     >
                       Delete

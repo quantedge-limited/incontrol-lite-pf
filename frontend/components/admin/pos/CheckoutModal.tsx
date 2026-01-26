@@ -2,27 +2,15 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { X, CreditCard, Smartphone, Wallet, User, Phone, Mail, MapPin } from 'lucide-react'; // Added MapPin
+import { X, CreditCard, Smartphone, Wallet, User, Phone, Mail, MapPin } from 'lucide-react';
 import { useState } from 'react';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
+import { POSCartItem, CustomerData } from '@/types/pos';
 
 interface CheckoutModalProps {
   onClose: () => void;
-  onCheckout: (customerData: {
-    name: string;
-    phone: string;
-    email?: string;
-    paymentMethod: string;
-    address?: string; // Make address optional
-  }) => Promise<void>;
+  onCheckout: (customerData: CustomerData) => Promise<void>;
   loading: boolean;
-  cart: CartItem[];
+  cart: POSCartItem[];
   subtotal: number;
   tax: number;
   total: number;
@@ -40,18 +28,18 @@ export default function CheckoutModal({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [customerAddress, setCustomerAddress] = useState(''); // Add this state
+  const [customerAddress, setCustomerAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const customerData = {
+    const customerData: CustomerData = {
       name: customerName,
       phone: customerPhone,
       email: customerEmail || undefined,
       paymentMethod,
-      address: customerAddress || '', // Now using the correct variable
+      address: customerAddress || undefined,
     };
     
     await onCheckout(customerData);

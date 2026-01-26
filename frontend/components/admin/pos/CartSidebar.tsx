@@ -1,22 +1,14 @@
+// components/admin/pos/CartSidebar.tsx
 "use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Minus, ShoppingCart, Trash2 } from 'lucide-react';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-  image_url?: string; // Add this
-  stock: number;
-}
+import { X, Trash2, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { POSCartItem } from '@/types/pos';
+import { toast } from "react-toastify";
 
 interface CartSidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  cart: CartItem[];
+  cart: POSCartItem[];
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemoveItem: (id: string) => void;
   onClearCart: () => void;
@@ -36,156 +28,172 @@ export default function CartSidebar({
   tax,
   total,
 }: CartSidebarProps) {
+  if (!isOpen) return null;
+
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          />
+    <div
+      className="fixed inset-0 z-50 overflow-hidden"
+      onClick={handleBackdropClick}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black bg-opacity-50" />
 
-          {/* Sidebar */}
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 30 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-50 shadow-2xl"
-          >
-            <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b">
-                <div className="flex items-center gap-3">
-                  <ShoppingCart className="h-6 w-6 text-emerald-600" />
-                  <h2 className="text-xl font-bold">Shopping Cart</h2>
-                  <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full text-sm font-medium">
-                    {cart.reduce((sum, item) => sum + item.quantity, 0)} items
-                  </span>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+      {/* Sidebar */}
+      <div className="absolute inset-y-0 right-0 max-w-full flex">
+        <div className="w-screen max-w-md">
+          <div className="h-full flex flex-col bg-white shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <div className="flex items-center gap-3">
+                <ShoppingCart className="h-6 w-6 text-emerald-600" />
+                <h2 className="text-lg font-bold text-gray-900">
+                  Cart ({cart.reduce((sum, item) => sum + item.quantity, 0)} items)
+                </h2>
               </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              {/* Cart Items */}
-              <div className="flex-1 overflow-y-auto p-6">
-                {cart.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                    <ShoppingCart className="h-16 w-16 mb-4" />
-                    <p className="text-lg">Your cart is empty</p>
-                    <p className="text-sm">Add items from the inventory</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {cart.map((item) => (
-                      <div key={item.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                        {/* Product Image */}
-                        <div className="relative h-20 w-20 rounded-lg overflow-hidden bg-white border">
+            {/* Cart Items */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                  <ShoppingCart className="h-16 w-16 mb-4" />
+                  <p className="text-lg font-medium">Your cart is empty</p>
+                  <p className="text-sm mt-1">Add items to get started</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {cart.map((item) => {
+                    const itemStock = item.stock || 0; // Handle undefined stock
+                    const isMaxQuantity = item.quantity >= itemStock;
+                    
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex gap-4 p-4 bg-gray-50 rounded-lg"
+                      >
+                        {/* Item Image */}
+                        <div className="flex-shrink-0">
                           {item.image_url ? (
                             <img
                               src={item.image_url}
                               alt={item.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
-                              }}
+                              className="h-16 w-16 object-cover rounded"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
+                            <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center">
                               <ShoppingCart className="h-8 w-8 text-gray-400" />
                             </div>
                           )}
                         </div>
 
-                        {/* Product Info */}
+                        {/* Item Details */}
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900">{item.name}</h4>
-                          <p className="text-sm text-gray-600">KES {item.price.toLocaleString()}</p>
-                          <p className="text-xs text-gray-500">{item.stock} available</p>
-                        </div>
+                          <div className="flex justify-between">
+                            <h3 className="font-medium text-gray-900">
+                              {item.name}
+                            </h3>
+                            <p className="font-bold text-emerald-600">
+                              {formatCurrency(item.price * item.quantity)}
+                            </p>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {formatCurrency(item.price)} each
+                          </p>
+                          {itemStock > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Stock: {itemStock}
+                            </p>
+                          )}
 
-                        {/* Quantity Controls */}
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                            className="p-1.5 bg-gray-200 rounded-lg hover:bg-gray-300"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-                          <span className="w-12 text-center font-semibold">{item.quantity}</span>
-                          <button
-                            onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                            className="p-1.5 bg-gray-200 rounded-lg hover:bg-gray-300"
-                            disabled={item.quantity >= item.stock}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        {/* Total Price */}
-                        <div className="text-right">
-                          <p className="font-bold">KES {(item.quantity * item.price).toLocaleString()}</p>
-                          <button
-                            onClick={() => onRemoveItem(item.id)}
-                            className="text-sm text-red-600 hover:text-red-800 mt-1"
-                          >
-                            Remove
-                          </button>
+                          {/* Quantity Controls */}
+                          <div className="flex items-center gap-3 mt-3">
+                            <button
+                              onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                              className="p-1.5 bg-gray-200 rounded-lg hover:bg-gray-300"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="w-8 text-center font-medium">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                              className="p-1.5 bg-gray-200 rounded-lg hover:bg-gray-300"
+                              disabled={isMaxQuantity}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => onRemoveItem(item.id)}
+                              className="ml-auto p-1.5 text-red-600 hover:text-red-800"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-              {/* Footer */}
-              <div className="border-t p-6">
-                {/* Clear Cart */}
-                {cart.length > 0 && (
-                  <button
-                    onClick={onClearCart}
-                    className="w-full mb-4 px-4 py-3 text-red-600 border border-red-200 rounded-xl hover:bg-red-50"
-                  >
-                    Clear All Items
-                  </button>
-                )}
-
+            {/* Footer */}
+            {cart.length > 0 && (
+              <div className="border-t bg-gray-50 p-4">
                 {/* Summary */}
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Subtotal</span>
-                    <span className="font-medium">KES {subtotal.toLocaleString()}</span>
+                <div className="space-y-2 mb-4">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-medium">{formatCurrency(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>Tax (16% VAT)</span>
-                    <span className="font-medium">KES {tax.toLocaleString()}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Tax (16%)</span>
+                    <span className="font-medium">{formatCurrency(tax)}</span>
                   </div>
-                  <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t">
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t">
                     <span>Total</span>
-                    <span>KES {total.toLocaleString()}</span>
+                    <span className="text-emerald-600">{formatCurrency(total)}</span>
                   </div>
                 </div>
 
-                {/* Close Button */}
-                <button
-                  onClick={onClose}
-                  className="w-full py-3.5 bg-emerald-600 text-white font-semibold rounded-xl hover:bg-emerald-700"
-                >
-                  Continue Shopping
-                </button>
+                {/* Actions */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => {
+                      onClearCart();
+                      toast.success('Cart cleared');
+                    }}
+                    className="w-full py-2 text-sm text-red-600 hover:text-red-800"
+                  >
+                    Clear Cart
+                  </button>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

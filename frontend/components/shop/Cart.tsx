@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Trash2, Plus, Minus, X } from 'lucide-react';
-import { salesApi } from '@/lib/api/salesApi';
+import { salesApi, CartItem } from '@/lib/api/salesApi';
 import { toast } from 'react-toastify';
 
 export default function Cart() {
-  const [cart, setCart] = useState<any>(null);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -15,25 +15,27 @@ export default function Cart() {
     fetchCart();
   }, []);
 
-  const fetchCart = async () => {
+  const fetchCart = () => {
     try {
-      const cartData = await salesApi.getCart();
+      // Get cart from localStorage, not API
+      const cartData = salesApi.getCartFromStorage();
       setCart(cartData);
     } catch (error) {
       console.error('Failed to fetch cart:', error);
     }
   };
 
-  const updateQuantity = async (itemId: string, newQuantity: number) => {
+  const updateQuantity = (inventoryId: string, newQuantity: number) => {
     if (newQuantity < 1) {
-      await removeItem(itemId);
+      removeItem(inventoryId);
       return;
     }
 
     try {
       setLoading(true);
-      await salesApi.updateCartItem(itemId, newQuantity);
-      await fetchCart();
+      // Update cart in localStorage
+      salesApi.updateCartItem(inventoryId, newQuantity);
+      fetchCart();
       toast.success('Cart updated');
     } catch (error) {
       toast.error('Failed to update cart');
@@ -43,11 +45,12 @@ export default function Cart() {
     }
   };
 
-  const removeItem = async (itemId: string) => {
+  const removeItem = (inventoryId: string) => {
     try {
       setLoading(true);
-      await salesApi.removeCartItem(itemId);
-      await fetchCart();
+      // Remove item from localStorage
+      salesApi.removeCartItem(inventoryId);
+      fetchCart();
       toast.success('Item removed from cart');
     } catch (error) {
       toast.error('Failed to remove item');
@@ -57,13 +60,14 @@ export default function Cart() {
     }
   };
 
-  const clearCart = async () => {
+  const clearCart = () => {
     if (!confirm('Are you sure you want to clear your cart?')) return;
 
     try {
       setLoading(true);
-      await salesApi.clearCart();
-      setCart(null);
+      // Clear cart from localStorage
+      salesApi.clearCart();
+      setCart([]);
       toast.success('Cart cleared');
     } catch (error) {
       toast.error('Failed to clear cart');
@@ -73,8 +77,8 @@ export default function Cart() {
     }
   };
 
-  const itemCount = cart?.items?.length || 0;
-  const totalPrice = cart?.total_price || 0;
+  const itemCount = cart.length || 0;
+  const totalPrice = salesApi.calculateCartTotal(cart);
 
   return (
     <>
@@ -133,8 +137,8 @@ export default function Cart() {
                     ) : (
                       <>
                         <ul className="divide-y divide-gray-200">
-                          {cart.items.map((item: any) => (
-                            <li key={item.id} className="py-6 flex">
+                          {cart.map((item: CartItem) => (
+                            <li key={item.inventory_id} className="py-6 flex">
                               {/* Item Details */}
                               <div className="flex-1">
                                 <div className="flex justify-between">
@@ -142,7 +146,7 @@ export default function Cart() {
                                     {item.inventory_name}
                                   </h4>
                                   <p className="ml-4 font-bold text-emerald-600">
-                                    KES {(item.quantity * item.price_per_unit).toFixed(2)}
+                                    KES {item.total_price.toFixed(2)}
                                   </p>
                                 </div>
                                 <p className="mt-1 text-sm text-gray-500">
@@ -151,7 +155,7 @@ export default function Cart() {
                                 {/* Quantity Controls */}
                                 <div className="mt-3 flex items-center space-x-3">
                                   <button
-                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                    onClick={() => updateQuantity(item.inventory_id, item.quantity - 1)}
                                     disabled={loading}
                                     className="p-1 rounded-full border border-gray-300 hover:bg-gray-50"
                                   >
@@ -161,14 +165,14 @@ export default function Cart() {
                                     {item.quantity}
                                   </span>
                                   <button
-                                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                    onClick={() => updateQuantity(item.inventory_id, item.quantity + 1)}
                                     disabled={loading}
                                     className="p-1 rounded-full border border-gray-300 hover:bg-gray-50"
                                   >
                                     <Plus size={16} />
                                   </button>
                                   <button
-                                    onClick={() => removeItem(item.id)}
+                                    onClick={() => removeItem(item.inventory_id)}
                                     disabled={loading}
                                     className="ml-4 p-1 text-red-600 hover:text-red-800"
                                   >

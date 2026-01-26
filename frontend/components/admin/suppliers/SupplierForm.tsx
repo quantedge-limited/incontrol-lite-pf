@@ -1,8 +1,9 @@
+// components/admin/suppliers/SupplierForm.tsx - FIXED
 "use client";
 
 import { useState } from 'react';
-import { Supplier, SupplierFormData } from './types';
-import { supplierApi } from '@/lib/api/supplierApi';
+import { Supplier } from './types';
+import { supplierApi, SupplierFormData as ApiSupplierFormData } from '@/lib/api/supplierApi';
 
 interface SupplierFormProps {
   onSave: () => void;
@@ -16,7 +17,7 @@ export default function SupplierForm({ onSave, editSupplier, onCancel }: Supplie
   const initialSupplies = initialAdditionalInfo?.supplies || 
                         (typeof initialAdditionalInfo === 'string' ? initialAdditionalInfo : '');
 
-  const [formData, setFormData] = useState<SupplierFormData>({
+  const [formData, setFormData] = useState({
     name: editSupplier?.name || '',
     email: editSupplier?.email || '',
     phone_number: editSupplier?.phone_number || '',
@@ -39,20 +40,37 @@ export default function SupplierForm({ onSave, editSupplier, onCancel }: Supplie
     setError('');
 
     try {
-      const apiData = {
-        name: formData.name,
-        email: formData.email || undefined,
-        phone_number: formData.phone_number || undefined,
-        address: formData.address || undefined,
-        additional_info: typeof formData.additional_info === 'string' 
-          ? formData.additional_info || undefined 
-          : JSON.stringify(formData.additional_info) || undefined,
+      // Prepare data for API - convert empty strings to undefined
+      const apiData: Partial<ApiSupplierFormData> = {
+        name: formData.name.trim(),
       };
+
+      // Only include non-empty fields
+      if (formData.email?.trim()) {
+        apiData.email = formData.email.trim();
+      }
+      if (formData.phone_number?.trim()) {
+        apiData.phone_number = formData.phone_number.trim();
+      }
+      if (formData.address?.trim()) {
+        apiData.address = formData.address.trim();
+      }
+      if (formData.additional_info?.trim()) {
+        apiData.additional_info = formData.additional_info.trim();
+      }
 
       if (editSupplier) {
         await supplierApi.update(editSupplier.id, apiData);
       } else {
-        await supplierApi.create(apiData);
+        // For create, we need the full type
+        const createData: ApiSupplierFormData = {
+          name: apiData.name!,
+          email: apiData.email,
+          phone_number: apiData.phone_number,
+          address: apiData.address,
+          additional_info: apiData.additional_info,
+        };
+        await supplierApi.create(createData);
       }
       
       onSave(); // Refresh the supplier list

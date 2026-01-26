@@ -1,4 +1,4 @@
-// app/admin/dashboard/pos/page.tsx - with temporary fix
+// app/admin/dashboard/pos/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -10,25 +10,15 @@ import CartSidebar from '@/components/admin/pos/CartSidebar';
 import InventoryGrid from '@/components/admin/pos/InventoryGrid';
 import CheckoutModal from '@/components/admin/pos/CheckoutModal';
 import { inventoryApi, InventoryItem } from '@/lib/api/inventoryApi';
-import { posApi } from '@/lib/api/sales';
-
-interface CartItem {
-  id: string;
-  inventory_id: number;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-  image_url?: string;
-  stock: number;
-}
+import { salesApi } from '@/lib/api/salesApi';
+import { POSCartItem, CustomerData } from '@/types/pos';
 
 export default function POSPage() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<POSCartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -38,16 +28,20 @@ export default function POSPage() {
     loadInventory();
   }, []);
 
-  // Filter inventory based on name only
+  // Filter inventory based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredInventory(inventory);
       return;
     }
     
-    const filtered = inventory.filter(item =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = inventory.filter(item => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        item.brand_name.toLowerCase().includes(searchLower) ||
+        (item.description && item.description.toLowerCase().includes(searchLower))
+      );
+    });
     
     setFilteredInventory(filtered);
   }, [searchTerm, inventory]);
@@ -56,8 +50,9 @@ export default function POSPage() {
     try {
       setLoading(true);
       const data = await inventoryApi.list();
-      // Filter only active items for POS
-      const activeItems = data.filter(item => item.is_active && item.quantity > 0);
+      const activeItems = data.filter(item => 
+        item.is_active && item.quantity_in_stock > 0
+      );
       setInventory(activeItems);
       setFilteredInventory(activeItems);
     } catch (error) {
@@ -68,55 +63,52 @@ export default function POSPage() {
     }
   };
 
-  // Helper to get image from inventory item
   const getItemImage = (item: InventoryItem): string | undefined => {
-    // Check all possible image fields
-    const imageFields = ['image_url', 'image', 'image_path', 'thumbnail_url'];
-    
-    for (const field of imageFields) {
-      if (field in item && item[field as keyof InventoryItem]) {
-        return item[field as keyof InventoryItem] as string;
-      }
+    if (item.image) {
+      return item.image.startsWith('http') 
+        ? item.image 
+        : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}${item.image}`;
     }
-    
     return undefined;
   };
 
   const addToCart = (item: InventoryItem) => {
     setCart(prev => {
-      const existing = prev.find(cartItem => cartItem.inventory_id === parseInt(item.id));
+      // Convert item.id to string for comparison
+      const itemIdString = item.id.toString();
+      const existing = prev.find(cartItem => cartItem.inventory_id === itemIdString);
       
       if (existing) {
-        // Check stock
-        if (existing.quantity >= item.quantity) {
+        if (existing.quantity >= item.quantity_in_stock) {
           toast.error('Insufficient stock');
           return prev;
         }
         return prev.map(cartItem =>
-          cartItem.inventory_id === parseInt(item.id)
+          cartItem.inventory_id === itemIdString
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
       }
       
-      // Check stock for new item
-      if (item.quantity <= 0) {
+      if (item.quantity_in_stock <= 0) {
         toast.error('Out of stock');
         return prev;
       }
       
       const itemImage = getItemImage(item);
       
-      return [...prev, {
-        id: item.id,
-        inventory_id: parseInt(item.id),
-        name: item.name,
-        price: item.price_per_unit,
+      const newCartItem: POSCartItem = {
+        id: itemIdString,
+        inventory_id: itemIdString,
+        name: item.brand_name,
+        price: item.selling_price,
         quantity: 1,
         image: itemImage,
         image_url: itemImage,
-        stock: item.quantity
-      }];
+        stock: item.quantity_in_stock
+      };
+      
+      return [...prev, newCartItem];
     });
   };
 
@@ -127,7 +119,7 @@ export default function POSPage() {
     }
     
     const item = cart.find(item => item.id === id);
-    if (item && quantity > item.stock) {
+    if (item && item.stock && quantity > item.stock) {
       toast.error(`Only ${item.stock} units available`);
       return;
     }
@@ -152,62 +144,38 @@ export default function POSPage() {
   };
 
   const calculateTax = () => {
-    return calculateSubtotal() * 0.16; // 16% VAT
+    return calculateSubtotal() * 0.16;
   };
 
   const calculateTotal = () => {
     return calculateSubtotal() + calculateTax();
   };
 
-  const handleCheckout = async (customerData: {
-    name: string;
-    phone: string;
-    email?: string;
-    paymentMethod: string;
-    address?: string;
-  }) => {
+  const handleCheckout = async (customerData: CustomerData) => {
     try {
       setCheckoutLoading(true);
       
-      // Convert payment method to the correct type
-      let paymentMethod: 'mpesa' | 'cash' = 'cash';
-      
-      if (customerData.paymentMethod.toLowerCase() === 'mpesa') {
-        paymentMethod = 'mpesa';
-      } else if (customerData.paymentMethod.toLowerCase() === 'cash') {
-        paymentMethod = 'cash';
-      }
-
-      // Prepare sale data for POS API
-      const saleData = {
-        buyer_name: customerData.name,
-        buyer_phone: customerData.phone,
-        buyer_email: customerData.email,
-        buyer_address: customerData.address || '',
-        sale_type: 'walkin' as const,
-        total_amount: calculateTotal(),
-        notes: `Payment method: ${paymentMethod}. Walk-in sale.`,
-        payment_method: paymentMethod,
+      const orderData = {
+        customer_name: customerData.name,
+        customer_phone: customerData.phone,
+        customer_email: customerData.email,
         items: cart.map(item => ({
-          inventory: item.inventory_id,
+          inventory_id: item.inventory_id,
           quantity: item.quantity,
-          price_per_unit: item.price,
         })),
       };
 
-      // Use the new POS API
-      await posApi.createSale(saleData);
+      const order = await salesApi.createOrder(orderData);
       
       toast.success('Sale completed successfully!');
       clearCart();
       setShowCheckout(false);
       
-      // Reload inventory to update stock
       await loadInventory();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Checkout error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to complete sale');
+      toast.error(error.message || 'Failed to complete sale');
     } finally {
       setCheckoutLoading(false);
     }
@@ -228,10 +196,9 @@ export default function POSPage() {
         onSearchChange={setSearchTerm}
         onRefresh={loadInventory}
         filteredProducts={filteredInventory}
-        // Temporary fix - add these props with default values
         selectedCategory="all"
-        onCategoryChange={() => {}} // Empty function
-        categories={[]} // Empty array
+        onCategoryChange={() => {}}
+        categories={[]}
       >
         <InventoryGrid
           inventory={filteredInventory}

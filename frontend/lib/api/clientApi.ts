@@ -1,38 +1,47 @@
+// lib/api/clientApi.ts - CORRECTED
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
 import { authApi } from './authApi';
 
+// Update interface to match Django serializer fields
 export interface Client {
   id: string;
   first_name: string;
   last_name: string;
   email?: string;
-  phone?: string;  // Note: In Django it's "phone_number", but you can map it
+  phone_number?: string;  // Changed from "phone" to "phone_number"
   address?: string;
-  additional_info?: string; // Add this if you need it
+  additional_info?: string;
   created_at: string;
   updated_at: string;
 }
 
+// For frontend convenience, you can keep an optional "phone" alias
+export interface ClientWithPhoneAlias extends Omit<Client, 'phone_number'> {
+  phone?: string; // Optional alias for phone_number
+}
+
 export const clientApi = {
-  // List all clients - using the correct endpoint from Django
+  // List all clients
   async list(): Promise<Client[]> {
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/clients/`, {
-      method: 'GET', // Explicitly set GET method
-      headers: authApi.getAuthHeaders(), // No arguments
+      method: 'GET',
+      headers: headers,
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: 'Failed to fetch clients' }));
       throw new Error(error.detail || 'Failed to fetch clients');
     }
-    return res.json();
+    return res.json(); // Backend returns Client objects with phone_number
   },
 
-  // Get single client - from Django: ClientRetrieveView
+  // Get single client
   async get(id: string): Promise<Client> {
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/clients/${id}/`, {
       method: 'GET',
-      headers: authApi.getAuthHeaders(), // No arguments
+      headers: headers,
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ detail: 'Failed to fetch client' }));
@@ -41,19 +50,25 @@ export const clientApi = {
     return res.json();
   },
 
-  // Create client - from Django: ClientCreateView
+  // Create client - send phone_number, not phone
   async create(clientData: Partial<Client>): Promise<Client> {
-    // Map phone to phone_number for Django
-    const mappedData: any = { ...clientData };
-    if (mappedData.phone !== undefined) {
-      mappedData.phone_number = mappedData.phone;
-      delete mappedData.phone;
+    // Remove any "phone" field since backend expects "phone_number"
+    const { phone, ...dataWithoutPhone } = clientData as any;
+    const backendData = { ...dataWithoutPhone };
+    
+    // If phone was provided, add it as phone_number
+    if (phone !== undefined) {
+      backendData.phone_number = phone;
     }
 
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/clients/create/`, {
       method: 'POST',
-      headers: authApi.getAuthHeaders(), // No arguments - it already includes Content-Type
-      body: JSON.stringify(mappedData),
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(backendData),
     });
 
     if (!res.ok) {
@@ -61,27 +76,28 @@ export const clientApi = {
       throw new Error(error.detail || 'Failed to create client');
     }
 
-    const result = await res.json();
-    // Map phone_number back to phone for frontend consistency
-    if (result.phone_number) {
-      result.phone = result.phone_number;
-    }
-    return result;
+    return await res.json(); // Returns Client with phone_number
   },
 
-  // Update client - from Django: ClientUpdateView
+  // Update client
   async update(id: string, clientData: Partial<Client>): Promise<Client> {
-    // Map phone to phone_number for Django
-    const mappedData: any = { ...clientData };
-    if (mappedData.phone !== undefined) {
-      mappedData.phone_number = mappedData.phone;
-      delete mappedData.phone;
+    // Remove any "phone" field since backend expects "phone_number"
+    const { phone, ...dataWithoutPhone } = clientData as any;
+    const backendData = { ...dataWithoutPhone };
+    
+    // If phone was provided, add it as phone_number
+    if (phone !== undefined) {
+      backendData.phone_number = phone;
     }
 
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/clients/${id}/update/`, {
       method: 'PUT',
-      headers: authApi.getAuthHeaders(), // No arguments - it already includes Content-Type
-      body: JSON.stringify(mappedData),
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(backendData),
     });
 
     if (!res.ok) {
@@ -89,19 +105,15 @@ export const clientApi = {
       throw new Error(error.detail || 'Failed to update client');
     }
 
-    const result = await res.json();
-    // Map phone_number back to phone for frontend consistency
-    if (result.phone_number) {
-      result.phone = result.phone_number;
-    }
-    return result;
+    return await res.json();
   },
 
-  // Delete client - from Django: ClientDeleteView
+  // Delete client
   async delete(id: string): Promise<void> {
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/clients/${id}/delete/`, {
       method: 'DELETE',
-      headers: authApi.getAuthHeaders(), // No arguments
+      headers: headers,
     });
 
     if (!res.ok) {
@@ -110,17 +122,15 @@ export const clientApi = {
     }
   },
 
-  // Note: You don't have a search endpoint in Django yet
-  // You'll need to implement it in Django first
+  // Search clients
   async search(query: string): Promise<Client[]> {
-    // Check if search endpoint exists first
+    const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/clients/search/?q=${encodeURIComponent(query)}`, {
-      headers: authApi.getAuthHeaders(), // No arguments
+      headers: headers,
     });
     
     if (!res.ok) {
       if (res.status === 404) {
-        // If search endpoint doesn't exist, fall back to filtering on client side
         const allClients = await this.list();
         return allClients.filter(client => 
           client.first_name.toLowerCase().includes(query.toLowerCase()) ||
@@ -135,3 +145,23 @@ export const clientApi = {
     return res.json();
   },
 };
+
+// Helper function to convert Client to frontend-friendly format with "phone" alias
+export function clientToFrontendFormat(client: Client): ClientWithPhoneAlias {
+  return {
+    ...client,
+    phone: client.phone_number,
+  };
+}
+
+// Helper function to convert frontend data to backend format
+export function clientToBackendFormat(data: Partial<ClientWithPhoneAlias>): Partial<Client> {
+  const { phone, ...rest } = data;
+  const backendData: Partial<Client> = { ...rest };
+  
+  if (phone !== undefined) {
+    backendData.phone_number = phone;
+  }
+  
+  return backendData;
+}

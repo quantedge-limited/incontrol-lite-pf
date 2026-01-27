@@ -18,9 +18,23 @@ export default function Home() {
 
   const handleAddToCart = (product: any) => {
     console.log('Product added to cart:', product);
-    // You can implement actual cart logic here
-    // For example: addToCart(product.id, 1);
-    // setIsCartOpen(true); // Open cart sidebar
+    
+    // Get existing cart from localStorage
+    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    
+    // Add new product
+    const updatedCart = [...existingCart, {
+      ...product,
+      cartQuantity: 1, // Add quantity for cart
+      addedAt: new Date().toISOString()
+    }];
+    
+    // Save back to localStorage
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    
+    // Open cart sidebar and show feedback
+    setIsCartOpen(true);
+    alert(`${product.name} added to cart!`);
   };
 
   const handleCheckout = () => {

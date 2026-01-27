@@ -1,5 +1,5 @@
 // lib/api/publicCartApi.ts
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
 
 export interface PublicCartItem {
   id: string;  // This should match what Django returns

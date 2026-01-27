@@ -1,5 +1,5 @@
 // lib/api/salesApi.ts - UPDATED to match Django backend
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
 
 // Update interfaces to match Django models
 export interface OrderItem {

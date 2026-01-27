@@ -6,7 +6,6 @@ import {Footer} from '@/components/frontpage/Footer/Footer';
 export default function Page() {
   return (
     <>
-
       <About />
       <Footer />
     </>

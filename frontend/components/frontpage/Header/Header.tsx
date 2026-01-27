@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/frontpage/Header/Header.tsx
 "use client";
 
@@ -24,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
           {/* Logo */}
           <div className="flex items-center">
             <h1 className="text-2xl font-bold" style={{ color: "#0091AD" }}>
-              Mams Enterprise
+              Mam&apos;s Enterprise
             </h1>
           </div>
 

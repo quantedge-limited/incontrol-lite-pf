@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -146,7 +147,7 @@ export default function Checkout() {
       
       {/* Payment Processing Modal */}
       {isProcessingPayment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-8 max-w-md mx-4">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>

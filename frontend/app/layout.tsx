@@ -6,7 +6,6 @@ import './globals.css';
 import { CartProvider } from '@/context/cart/CartContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { Header } from '@/components/frontpage/Header/Header';
 import { useRouter } from 'next/navigation'; // Add this
 
 const inter = Inter({ subsets: ['latin'] });
@@ -27,7 +26,6 @@ export default function RootLayout({
       <body className={inter.className}>
         <CartProvider>
           <ToastContainer position="top-right" autoClose={3000} />
-          <Header onCartClick={handleCartClick} /> {/* Pass the prop */}
           <main>{children}</main>
         </CartProvider>
       </body>

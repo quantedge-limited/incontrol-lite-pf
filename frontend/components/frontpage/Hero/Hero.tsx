@@ -30,7 +30,7 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
   };
 
   return (
-    <section className="relative w-full h-screen overflow-hidden" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f0fbfd 50%, #e6f7fb 100%)' }}>
+    <section className="relative w-full min-h-[80vh] md:min-h-[90vh] overflow-hidden" style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f0fbfd 50%, #e6f7fb 100%)' }}>
       {/* Animated Background Elements */}
       <motion.div
         animate={{ y: [0, -20, 0] }}
@@ -43,15 +43,15 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
         className="absolute bottom-20 left-10 w-96 h-96 rounded-full opacity-15 blur-3xl" style={{ background: 'linear-gradient(135deg, #5fb3cc 0%, #0091AD 100%)' }}
       />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center pt-24 md:pt-28">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="w-full grid md:grid-cols-2 gap-8 items-center"
+          className="w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center"
         >
           {/* Left Content */}
-          <motion.div variants={itemVariants} className="z-10">
+          <motion.div variants={itemVariants} className="z-10 order-1 md:order-1">
             <motion.h1
               className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight"
               initial={{ opacity: 0, x: -50 }}
@@ -65,65 +65,50 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
               variants={itemVariants}
               className="text-lg text-gray-600 mb-8 leading-relaxed"
             >
-              Experience Mams Enterprise&apos;s carefully curated selection of household and personal care products. Premium quality at affordable prices, right here in DCI Juja, Kenya.
+              Experience Mam&apos;s Enterprise&apos;s carefully curated selection of household and personal care products. Premium quality at affordable prices, right here in DCI Juja, Kenya.
             </motion.p>
 
             <motion.div
               variants={itemVariants}
-              className="flex flex-col sm:flex-row gap-4"
+              className="flex flex-col sm:flex-row gap-4 mb-8 md:mb-0"
             >
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: '0 10px 25px rgba(0, 145, 173, 0.3)' }}
                 whileTap={{ scale: 0.95 }}
-                onClick={onShopClick}
-                className="px-8 py-4 text-white font-bold rounded-lg shadow-lg transition-all" style={{ backgroundColor: '#0091AD' }} onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'} onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                onClick={() => {
+                  // Scroll to product list section
+                  const productSection = document.getElementById('product-list');
+                  if (productSection) {
+                    productSection.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="px-8 py-4 text-white font-bold rounded-lg shadow-lg transition-all" 
+                style={{ backgroundColor: '#0091AD' }} 
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'} 
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
               >
                 Shop Now
               </motion.button>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 font-bold rounded-lg transition-colors" style={{ borderWidth: '2px', borderColor: '#0091AD', color: '#0091AD' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e6f7fb'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-              >
-                Learn More
-              </motion.button>
-            </motion.div>
-
-            {/* Stats */}
-            <motion.div
-              variants={itemVariants}
-              className="grid grid-cols-3 gap-4 mt-12"
-            >
-              {[
-                { label: 'Products', value: '52' },
-                { label: 'Categories', value: '10' },
-                { label: 'Since', value: '2020' },
-              ].map((stat, index) => (
-                <div key={index}>
-                  <p className="text-2xl font-bold" style={{ color: '#0091AD' }}>{stat.value}</p>
-                  <p className="text-sm text-gray-600">{stat.label}</p>
-                </div>
-              ))}
             </motion.div>
           </motion.div>
 
           {/* Right Side - Illustration */}
+          {/* Changed: removed 'hidden md:block' and added mobile styling */}
           <motion.div
             variants={itemVariants}
-            className="hidden md:block relative h-full"
+            className="block relative h-full order-2 md:order-2"
           >
             <motion.div
-              animate={{ y: [0, -30, 0] }}
               transition={{ duration: 4, repeat: Infinity }}
               className="relative"
             >
               <Image
                 src="/hero1.png" 
-                alt="Description" 
+                alt="Mam's Enterprise Products" 
                 width={500}
                 height={320}
-                className="w-full h-80 object-cover rounded-3xl shadow-2xl"
+                className="w-full h-64 md:h-80 object-cover rounded-3xl shadow-2xl"
+                priority
               />
               <div className="absolute inset-0 bg-linear-to-t from-gray-900/20 to-transparent rounded-3xl pointer-events-none" />
             </motion.div>

@@ -43,7 +43,7 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
         className="absolute bottom-20 left-10 w-96 h-96 rounded-full opacity-15 blur-3xl" style={{ background: 'linear-gradient(135deg, #5fb3cc 0%, #0091AD 100%)' }}
       />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center pt-24 md:pt-28">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center pt-24 md:pt-28">
         <motion.div
           variants={containerVariants}
           initial="hidden"

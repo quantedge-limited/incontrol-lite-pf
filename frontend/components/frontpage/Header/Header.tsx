@@ -36,12 +36,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             >
               Home
             </Link>
-            <a
-              href="#products"
-              className="text-gray-700 hover:text-[#0091AD] font-medium"
-            >
-              Products
-            </a>
+            
             <Link
               href="/about"
               className="text-gray-700 hover:text-[#0091AD] font-medium"

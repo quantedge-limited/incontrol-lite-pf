@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/frontpage/Header/Header.tsx
 "use client";
 

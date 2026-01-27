@@ -49,7 +49,7 @@ export const About: React.FC = () => {
         style={{ background: 'linear-gradient(135deg, #5fb3cc 0%, #0091AD 100%)' }}
       />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-8">
         {/* Hero Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -63,7 +63,7 @@ export const About: React.FC = () => {
             <span className="text-sm font-semibold text-[#0091AD]">Trusted Since 2020</span>
           </div>
           
-          <h2 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+          <h2 className="text-xl md:text-4xl font-bold text-gray-900 mb-6 leading-tight">
             More Than Just A Store
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#0091AD] to-[#00b8d4]">
               Your Wellness Partner
@@ -74,39 +74,6 @@ export const About: React.FC = () => {
             MAM&apos;s Enterprise is your trusted source for premium hygiene products, 
             combining quality, affordability, and exceptional service since our founding.
           </p>
-        </motion.div>
-
-        {/* Achievement Stats - Added back */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16"
-        >
-          {achievements.map((achievement, index) => {
-            const Icon = achievement.icon;
-            return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-1"
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#e6f7fb] to-[#d1f2f7] flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Icon size={24} className="text-[#0091AD]" />
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold text-gray-900">{achievement.number}</div>
-                    <div className="text-sm text-gray-600">{achievement.label}</div>
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
         </motion.div>
 
         {/* Main Content Grid */}
@@ -125,7 +92,7 @@ export const About: React.FC = () => {
                 <span className="text-sm font-semibold uppercase tracking-wider text-[#0091AD]">Our Journey</span>
               </div>
               
-              <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+              <h3 className="text-3xl md:text-3xl font-bold text-gray-900 mb-6">
                 Building Trust Through Quality & Service
               </h3>
               
@@ -181,30 +148,7 @@ export const About: React.FC = () => {
             viewport={{ once: true }}
             className="space-y-8"
           >
-            {/* Brand Logo Display */}
-            <div className="relative group">
-              <div className="relative overflow-hidden rounded-2xl shadow-2xl">
-                <div 
-                  className="w-full h-64 md:h-80 rounded-2xl flex items-center justify-center relative"
-                  style={{ 
-                    background: 'linear-gradient(135deg, #5fb3cc 0%, #0091AD 50%, #00b8d4 100%)',
-                    backgroundSize: '400% 400%',
-                  }}
-                >
-                  <div className="relative z-10 text-center p-8">
-                    <div className="text-7xl md:text-8xl font-bold text-white mb-4 tracking-tighter">ME</div>
-                    <div className="text-white/90 text-xl font-semibold tracking-wide">MAM&apos;s ENTERPRISE</div>
-                    <div className="text-white/70 mt-2 text-sm">Since 2020</div>
-                  </div>
-                  
-                  {/* Animated gradient overlay */}
-                  <div className="absolute inset-0 opacity-30 mix-blend-overlay" style={{
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
-                    animation: 'shimmer 3s infinite'
-                  }} />
-                </div>
-              </div>
-            </div>
+            
 
             {/* Our Values */}
             <div>
@@ -241,59 +185,47 @@ export const About: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Commitment Section */}
+        {/* Achievements Section */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="relative rounded-2xl overflow-hidden mb-16"
+          className="mt-20"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0091AD] via-[#00b8d4] to-[#5fb3cc] opacity-90"></div>
-          <div className="absolute inset-0 opacity-10" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E")`
-          }} />
-          
-          <div className="relative z-10 p-8 md:p-12 text-center text-white">
-            <Award size={48} className="mx-auto mb-6 opacity-90" />
-            <h3 className="text-3xl md:text-4xl font-bold mb-6">Our Commitment to You</h3>
-            <p className="text-xl md:text-2xl max-w-3xl mx-auto opacity-95 leading-relaxed">
-              &ldquo;We&apos;re dedicated to providing more than just products—we deliver peace of mind, 
-              comfort, and reliability for every family we serve. Your trust is our greatest achievement.&rdquo;
-            </p>
-            <div className="mt-8 flex items-center justify-center gap-4">
-              <div className="w-8 h-0.5 bg-white/50"></div>
-              <span className="font-semibold">Trust • Quality • Community • Excellence</span>
-              <div className="w-8 h-0.5 bg-white/50"></div>
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <div className="w-10 h-1 bg-gradient-to-r from-[#0091AD] to-[#00b8d4]"></div>
+              <span className="text-sm font-semibold uppercase tracking-wider text-[#0091AD]">Our Impact</span>
+              <div className="w-10 h-1 bg-gradient-to-r from-[#0091AD] to-[#00b8d4]"></div>
             </div>
+            <h3 className="text-3xl md:text-4xl font-bold text-gray-900">
+              Making a Difference in Kenyan Homes
+            </h3>
           </div>
-        </motion.div>
-
-        {/* CTA Section - Added back */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="text-center pb-12"
-        >
-          <h3 className="text-3xl font-bold text-gray-900 mb-6">
-            Ready to Experience Premium Hygiene Products?
-          </h3>
-          <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-            Join thousands of satisfied customers who trust MAM&apos;s Enterprise for their family&apos;s hygiene needs.
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              const products = document.getElementById('products');
-              if (products) products.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="px-8 py-4 bg-gradient-to-r from-[#0091AD] to-[#00b8d4] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all text-lg"
-          >
-            Shop Our Products
-          </motion.button>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {achievements.map((achievement, index) => {
+              const Icon = achievement.icon;
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  whileHover={{ scale: 1.05 }}
+                  className="bg-gradient-to-b from-white to-[#f8fdff] rounded-xl p-6 text-center border border-gray-100 shadow-sm hover:shadow-md transition-all"
+                >
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#e6f7fb] to-[#d1f2f7] flex items-center justify-center mb-4">
+                    <Icon size={28} className="text-[#0091AD]" />
+                  </div>
+                  <div className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">{achievement.number}</div>
+                  <div className="text-sm text-gray-600 font-medium">{achievement.label}</div>
+                </motion.div>
+              );
+            })}
+          </div>
         </motion.div>
       </div>
 

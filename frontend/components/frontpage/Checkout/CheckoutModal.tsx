@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/frontpage/Checkout/CheckoutModal.tsx
 'use client';
 

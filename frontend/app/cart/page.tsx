@@ -49,7 +49,7 @@ export default function CartPage() {
             <h2 className="mt-4 text-2xl font-bold text-gray-900">Your cart is empty</h2>
             <p className="mt-2 text-gray-600">Add some items to get started</p>
             <Link
-              href="/shop"
+              href="/"
               className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-emerald-600 hover:bg-emerald-700"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -181,7 +181,7 @@ export default function CartPage() {
 
               <div className="mt-4 text-center">
                 <Link
-                  href="/shop"
+                  href="/"
                   className="text-sm text-emerald-600 hover:text-emerald-700"
                 >
                   Continue shopping

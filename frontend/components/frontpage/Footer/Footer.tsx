@@ -64,7 +64,7 @@ export const Footer: React.FC = () => {
     {/* WhatsApp */}
     <li>
       <Link 
-        href="https://wa.me/yournumber" 
+        href="+254 719 338 583" 
         target="_blank"
         className="transition-colors" 
         style={{ color: '#999' }} 
@@ -77,7 +77,7 @@ export const Footer: React.FC = () => {
     {/* Instagram */}
     <li>
       <Link 
-        href="https://instagram.com/yourprofile" 
+        href="https://www.instagram.com/mamsenterprise/" 
         target="_blank"
         className="transition-colors" 
         style={{ color: '#999' }} 
@@ -90,7 +90,7 @@ export const Footer: React.FC = () => {
     {/* Facebook */}
     <li>
       <Link 
-        href="https://facebook.com/yourpage" 
+        href="https://web.facebook.com/people/MAMs-Enterprise/61567639457490/" 
         target="_blank"
         className="transition-colors" 
         style={{ color: '#999' }} 
@@ -126,7 +126,7 @@ export const Footer: React.FC = () => {
               </li>
               <li className="flex items-center gap-2">
                 <Phone size={16} style={{ color: '#0091AD' }} />
-                <span>+254 (0) 700 000 000</span>
+                <span>+254 719 338 583</span>
               </li>
               <li className="flex items-center gap-2">
                 <MapPin size={16} style={{ color: '#0091AD' }} />

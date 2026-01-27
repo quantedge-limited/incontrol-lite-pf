@@ -65,7 +65,7 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
               variants={itemVariants}
               className="text-lg text-gray-600 mb-8 leading-relaxed"
             >
-              Experience Mams Enterprise&apos;s carefully curated selection of household and personal care products. Premium quality at affordable prices, right here in DCI Juja, Kenya.
+              Experience Mam&apos;s Enterprise&apos;s carefully curated selection of household and personal care products. Premium quality at affordable prices, right here in DCI Juja, Kenya.
             </motion.p>
 
             <motion.div

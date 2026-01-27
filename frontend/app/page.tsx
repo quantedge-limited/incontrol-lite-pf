@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Hero } from '@/components/frontpage/Hero/Hero';
 import { ProductsList } from '@/components/frontpage/Product/ProductsList';
 import { CartSidebar } from '@/components/frontpage/Cart/CartSidebar';
+import { Header } from '@/components/frontpage/Header/Header';
 import { Footer } from '@/components/frontpage/Footer/Footer';
 import { useRouter } from 'next/navigation';
 
@@ -14,6 +15,10 @@ export default function Home() {
 
   const handleShopClick = () => {
     router.push('/shop');
+  };
+
+  const handleCartClick = () => {
+    setIsCartOpen(true); // Open cart when cart icon is clicked
   };
 
   const handleAddToCart = (product: any) => {
@@ -44,6 +49,7 @@ export default function Home() {
   return (
     <>
       <main className="min-h-screen">
+        <Header onCartClick={handleCartClick} /> {/* Add onCartClick here */}
         <Hero onShopClick={handleShopClick} />
         <ProductsList onAddToCart={handleAddToCart} />
         <CartSidebar 

@@ -56,7 +56,7 @@ export const About: React.FC = () => {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="mb-16"
         >
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-[#e6f7fb] to-[#d1f2f7] px-4 py-2 rounded-full mb-6">
             <CheckCircle size={20} className="text-[#0091AD]" />

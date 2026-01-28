@@ -98,6 +98,7 @@ export default function InventoryForm({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return setError("Category name is required");
     try {
@@ -271,11 +272,14 @@ export default function InventoryForm({
                   </option>
                 ))}
               </select>
+
+               {/*need to be corrected */}
               <button
                 type="button"
                 onClick={() => setShowAddCategory(true)}
                 className="px-4 py-3 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 flex items-center gap-2"
               >
+               
                 <Plus className="h-4 w-4" /> New
               </button>
             </div>
@@ -418,7 +422,7 @@ export default function InventoryForm({
       {/* Add Category Modal */}
       <AnimatePresence>
         {showAddCategory && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}

@@ -49,12 +49,12 @@ export default function CartSidebar({
       className="fixed inset-0 z-50 overflow-hidden"
       onClick={handleBackdropClick}
     >
-      {/* Backdrop - Completely Transparent */}
-      <div className="absolute inset-0 bg-transparent" />
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black bg-opacity-50" />
 
-      {/* Sidebar - Responsive (w-full on mobile, max-w-md on desktop) */}
-      <div className="absolute inset-y-0 right-0 w-full max-w-md flex">
-        <div className="w-full">
+      {/* Sidebar */}
+      <div className="absolute inset-y-0 right-0 max-w-full flex">
+        <div className="w-screen max-w-md">
           <div className="h-full flex flex-col bg-white shadow-xl">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -66,7 +66,7 @@ export default function CartSidebar({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -75,21 +75,21 @@ export default function CartSidebar({
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto p-4">
               {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                  <ShoppingCart className="h-16 w-16 mb-4 opacity-20" />
+                <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                  <ShoppingCart className="h-16 w-16 mb-4" />
                   <p className="text-lg font-medium">Your cart is empty</p>
                   <p className="text-sm mt-1">Add items to get started</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {cart.map((item) => {
-                    const itemStock = item.stock || 0;
+                    const itemStock = item.stock || 0; // Handle undefined stock
                     const isMaxQuantity = item.quantity >= itemStock;
                     
                     return (
                       <div
                         key={item.id}
-                        className="flex gap-4 p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-100"
+                        className="flex gap-4 p-4 bg-gray-50 rounded-lg"
                       >
                         {/* Item Image */}
                         <div className="flex-shrink-0">
@@ -97,53 +97,55 @@ export default function CartSidebar({
                             <img
                               src={item.image_url}
                               alt={item.name}
-                              className="h-14 w-14 sm:h-16 sm:w-16 object-cover rounded shadow-sm"
+                              className="h-16 w-16 object-cover rounded"
                             />
                           ) : (
-                            <div className="h-14 w-14 sm:h-16 sm:w-16 bg-gray-200 rounded flex items-center justify-center">
-                              <ShoppingCart className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+                            <div className="h-16 w-16 bg-gray-200 rounded flex items-center justify-center">
+                              <ShoppingCart className="h-8 w-8 text-gray-400" />
                             </div>
                           )}
                         </div>
 
                         {/* Item Details */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-medium text-gray-900 truncate pr-2">
+                        <div className="flex-1">
+                          <div className="flex justify-between">
+                            <h3 className="font-medium text-gray-900">
                               {item.name}
                             </h3>
-                            <p className="font-bold text-emerald-600 whitespace-nowrap">
+                            <p className="font-bold text-emerald-600">
                               {formatCurrency(item.price * item.quantity)}
                             </p>
                           </div>
-                          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                          <p className="text-sm text-gray-600 mt-1">
                             {formatCurrency(item.price)} each
                           </p>
-                          
+                          {itemStock > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Stock: {itemStock}
+                            </p>
+                          )}
+
                           {/* Quantity Controls */}
                           <div className="flex items-center gap-3 mt-3">
-                            <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden">
-                              <button
-                                onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                                className="p-1.5 hover:bg-gray-100 transition-colors"
-                              >
-                                <Minus className="h-3.5 w-3.5" />
-                              </button>
-                              <span className="w-8 text-center text-sm font-semibold">
-                                {item.quantity}
-                              </span>
-                              <button
-                                onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                                className="p-1.5 hover:bg-gray-100 transition-colors disabled:opacity-30"
-                                disabled={isMaxQuantity}
-                              >
-                                <Plus className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                            
+                            <button
+                              onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                              className="p-1.5 bg-gray-200 rounded-lg hover:bg-gray-300"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="w-8 text-center font-medium">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                              className="p-1.5 bg-gray-200 rounded-lg hover:bg-gray-300"
+                              disabled={isMaxQuantity}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
                             <button
                               onClick={() => onRemoveItem(item.id)}
-                              className="ml-auto p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                              className="ml-auto p-1.5 text-red-600 hover:text-red-800"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -158,36 +160,31 @@ export default function CartSidebar({
 
             {/* Footer */}
             {cart.length > 0 && (
-              <div className="border-t bg-white p-4 sm:p-6 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+              <div className="border-t bg-gray-50 p-4">
                 {/* Summary */}
                 <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Subtotal</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(subtotal)}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Subtotal</span>
+                    <span className="font-medium">{formatCurrency(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between text-sm text-gray-600">
-                    <span>Tax (16%)</span>
-                    <span className="font-medium text-gray-900">{formatCurrency(tax)}</span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Tax (16%)</span>
+                    <span className="font-medium">{formatCurrency(tax)}</span>
                   </div>
-                  <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-100 mt-2">
+                  <div className="flex justify-between text-lg font-bold pt-2 border-t">
                     <span>Total</span>
                     <span className="text-emerald-600">{formatCurrency(total)}</span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="space-y-3">
-                  <button
-                    className="w-full py-3.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100"
-                  >
-                    Checkout
-                  </button>
+                <div className="space-y-2">
                   <button
                     onClick={() => {
                       onClearCart();
                       toast.success('Cart cleared');
                     }}
-                    className="w-full py-2 text-sm text-red-500 font-medium hover:text-red-700 transition-colors"
+                    className="w-full py-2 text-sm text-red-600 hover:text-red-800"
                   >
                     Clear Cart
                   </button>

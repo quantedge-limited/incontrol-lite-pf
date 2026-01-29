@@ -36,6 +36,7 @@ export default function InventoryDashboard() {
   const [filterStock, setFilterStock] = useState<'all' | 'low'>('all');
 
   // Load inventory
+  //Currently the toast notifications are working properly and displayed in the frontend
   useEffect(() => {
     fetchInventory();
   }, []);
@@ -497,6 +498,7 @@ export default function InventoryDashboard() {
                     onClick={() => setShowForm(true)}
                     className="px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 inline-flex items-center gap-2"
                   >
+                    
                     <Plus className="h-5 w-5" />
                     Add First Item
                   </button>

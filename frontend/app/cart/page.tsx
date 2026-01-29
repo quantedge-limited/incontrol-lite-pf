@@ -1,4 +1,3 @@
-// app/cart/page.tsx - FIXED
 "use client";
 
 import { useState } from 'react';

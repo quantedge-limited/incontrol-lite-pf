@@ -11,7 +11,7 @@ export default function AdminAuthPage() {
   const [redirectParam, setRedirectParam] = useState<string>('/admin/dashboard/sales');
   
   // API base URL - USE THIS
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
   
   // --- UI & FLOW STATE ---
   const [step, setStep] = useState<1 | 2>(1);
@@ -267,7 +267,7 @@ export default function AdminAuthPage() {
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-gray-200 text-center">
           <p className="text-xs text-gray-500">
-            Secure login powered by Django REST Framework
+            Secure login powered by QUANTEDGE LIMITED
           </p>
         </div>
       </div>

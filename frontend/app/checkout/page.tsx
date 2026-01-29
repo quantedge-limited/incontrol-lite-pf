@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// app/checkout/page.tsx - UPDATED
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -13,10 +11,9 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [formData, setFormData] = useState({
-    customer_name: '',  // Changed from buyer_name to customer_name
-    customer_email: '', // Changed from buyer_email to customer_email
-    customer_phone: '', // Changed from buyer_phone to customer_phone
-    // buyer_address removed since your Django model doesn't have it
+    customer_name: '', 
+    customer_email: '', 
+    customer_phone: '', 
     notes: '',
   });
 
@@ -178,7 +175,7 @@ export default function CheckoutPage() {
                     </label>
                     <input
                       type="email"
-                      name="customer_email"  // Changed from buyer_email
+                      name="customer_email"
                       value={formData.customer_email}
                       onChange={handleChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500"

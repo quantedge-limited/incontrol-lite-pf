@@ -1,27 +1,26 @@
 export interface Supplier {
-  id: number;  // Changed from string to number since backend uses <int:pk>
+  id: string; 
   name: string;
-  email?: string;
-  phone_number?: string;
-  address?: string;
+  email?: string|null;
+  phone_number?: string|null;
+  address?: string|null;
   additional_info?: any;
   created_at: string;
   updated_at: string;
   created_by?: {
-    id: string; // This can stay string (user ID might be UUID)
+    id: string; 
     email: string;
     first_name: string;
     last_name: string;
   };
 }
 
-// Fix: Make all fields optional and allow null
 export interface SupplierFormData {
   name: string;
-  email?: string | null;  // Allow null
-  phone_number?: string | null;  // Allow null
-  address?: string | null;  // Allow null
-  additional_info?: any | null;  // Allow null (should be object/JSON, not string)
+  email?: string | null; 
+  phone_number?: string | null;  
+  address?: string | null;  
+  additional_info?: any | null;  
 }
 
 // Helper function to format date

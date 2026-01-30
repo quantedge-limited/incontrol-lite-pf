@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -6,27 +6,19 @@ import SupplierForm from './SupplierForm';
 import { Supplier } from './types';
 import { supplierApi } from '@/lib/api/supplierApi';
 import { authApi } from '@/lib/api/authApi';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Building2,
-  Phone,
-  Mail,
-  TrendingUp,
-  MapPin
-} from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { Phone, Mail, MapPin } from 'lucide-react';
 
 export default function SupplierDashboard() {
   const router = useRouter();
-
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [filteredSuppliers, setFilteredSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 🔐 AUTH: Safe fetch wrapper
+  // 🔐 Auth-safe fetch
   const fetchSuppliers = async () => {
     try {
       if (!authApi.isAuthenticated()) {
@@ -34,43 +26,29 @@ export default function SupplierDashboard() {
         router.push('/login');
         return;
       }
-
       const data = await supplierApi.list();
       setSuppliers(data);
       setFilteredSuppliers(data);
-    } catch (error: any) {
-      console.error('Failed to fetch suppliers:', error);
-
-      // 🔐 AUTH: Handle expired / invalid token
-      if (
-        error.message?.toLowerCase().includes('not authenticated') ||
-        error.message?.includes('401') ||
-        error.message?.includes('403')
-      ) {
-        authApi.logout();
-        router.push('/login');
-        return;
-      }
-
-      alert('Failed to load suppliers. Please try again.');
+    } catch (err: any) {
+      console.error(err);
+      authApi.logout();
+      router.push('/login');
     } finally {
       setLoading(false);
     }
   };
 
-  // AUTH: Run once on mount
   useEffect(() => {
     fetchSuppliers();
   }, []);
 
-  // Search filter
+  // Filter suppliers by search
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) {
       setFilteredSuppliers(suppliers);
       return;
     }
-
-    const q = searchQuery.toLowerCase();
     setFilteredSuppliers(
       suppliers.filter(s =>
         s.name.toLowerCase().includes(q) ||
@@ -81,22 +59,13 @@ export default function SupplierDashboard() {
     );
   }, [searchQuery, suppliers]);
 
-  // AUTH-safe delete
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this supplier?')) return;
-
     try {
       await supplierApi.delete(id);
       fetchSuppliers();
-    } catch (error: any) {
-      console.error('Delete failed:', error);
-
-      if (error.message?.includes('Not authenticated')) {
-        authApi.logout();
-        router.push('/login');
-        return;
-      }
-
+    } catch (err) {
+      console.error(err);
       alert('Failed to delete supplier.');
     }
   };
@@ -126,9 +95,7 @@ export default function SupplierDashboard() {
 
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-emerald-900">
-            Supplier Management
-          </h1>
+          <h1 className="text-3xl font-bold text-emerald-900">Supplier Management</h1>
           <button
             onClick={() => {
               setEditingSupplier(null);
@@ -140,7 +107,7 @@ export default function SupplierDashboard() {
           </button>
         </div>
 
-        {/* Form */}
+        {/* Supplier Form */}
         <AnimatePresence>
           {showForm && (
             <SupplierForm
@@ -151,40 +118,42 @@ export default function SupplierDashboard() {
           )}
         </AnimatePresence>
 
-        {/* List */}
+        {/* Supplier List */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          {filteredSuppliers.map(supplier => (
-            <div
-              key={supplier.id}
-              className="bg-white p-4 rounded-lg shadow"
-            >
-              <h3 className="font-semibold">{supplier.name}</h3>
-
-              {supplier.phone_number && (
+          {filteredSuppliers.map(s => (
+            <div key={s.id} className="bg-white p-4 rounded-lg shadow">
+              <h3 className="font-semibold">{s.name}</h3>
+              {s.phone_number && (
                 <p className="text-sm flex items-center">
-                  <Phone className="h-4 w-4 mr-1" />
-                  {supplier.phone_number}
+                  <Phone className="h-4 w-4 mr-1" /> {s.phone_number}
                 </p>
               )}
-
+              {s.email && (
+                <p className="text-sm flex items-center">
+                  <Mail className="h-4 w-4 mr-1" /> {s.email}
+                </p>
+              )}
+              {s.address && (
+                <p className="text-sm flex items-center">
+                  <MapPin className="h-4 w-4 mr-1" /> {s.address}
+                </p>
+              )}
               <div className="flex justify-end gap-2 mt-4">
-                <button
-                  onClick={() => handleEdit(supplier)}
-                  className="text-blue-600"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(supplier.id)}
-                  className="text-red-600"
-                >
-                  Delete
-                </button>
+                <button onClick={() => handleEdit(s)} className="text-blue-600">Edit</button>
+                <button onClick={() => handleDelete(s.id)} className="text-red-600">Delete</button>
               </div>
             </div>
           ))}
         </div>
 
+        {/* Search input */}
+        <input
+          type="text"
+          placeholder="Search suppliers..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          className="mt-6 px-3 py-2 border rounded w-full sm:w-80"
+        />
       </div>
     </div>
   );

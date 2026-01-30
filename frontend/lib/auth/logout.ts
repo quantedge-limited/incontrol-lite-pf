@@ -12,3 +12,10 @@ export function logout() {
   // Redirect to login
   window.location.href = '/login';
 }
+
+{/*
+  
+  The logout function clears all authentication and session data from
+   localStorage and sessionStorage,
+  then redirects the user to the login page.
+*/}

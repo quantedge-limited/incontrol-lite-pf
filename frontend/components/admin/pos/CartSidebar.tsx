@@ -5,6 +5,12 @@ import { X, Trash2, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { POSCartItem } from '@/types/pos';
 import { toast } from "react-toastify";
 
+{/*
+  
+  This component renders a sidebar cart for the POS system. It displays cart items, allows quantity adjustments,
+  item removal, and cart clearing. It also shows subtotal, tax, and total amounts.
+  */}
+
 interface CartSidebarProps {
   isOpen: boolean;
   onClose: () => void;

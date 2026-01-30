@@ -17,6 +17,13 @@ import {
 import { inventoryApi } from "@/lib/api/inventoryApi";
 import type { InventoryFormData, InventoryCategory } from "./types";
 
+{/*
+  
+  This component renders a form for adding or editing inventory items. It includes fields for brand name, category, pricing,
+  quantity, status, description, and image upload. It also allows adding new categories via a modal dialog.
+
+*/}
+
 interface InventoryFormProps {
   item?: any;
   onSave: () => void;

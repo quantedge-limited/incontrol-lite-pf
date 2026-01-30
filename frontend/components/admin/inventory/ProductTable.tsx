@@ -4,6 +4,13 @@
 import { Product } from './types';
 import { useState } from 'react';
 
+{/*
+  
+  This component renders a table of inventory products.
+  It accepts an array of products, and functions to delete and update products.
+  It allows editing of product quantities in-place.
+  */}
+
 export default function ProductTable({
   products,
   onDelete,

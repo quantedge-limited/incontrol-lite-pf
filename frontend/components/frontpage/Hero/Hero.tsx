@@ -76,7 +76,7 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
                 whileHover={{ scale: 1.05, boxShadow: '0 10px 25px rgba(0, 145, 173, 0.3)' }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
-                  // Scroll to product list section
+                  // Changed: Now targets the 'products' ID for navigation
                   const productSection = document.getElementById('product-list');
                   if (productSection) {
                     productSection.scrollIntoView({ behavior: 'smooth' });
@@ -93,7 +93,6 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
           </motion.div>
 
           {/* Right Side - Illustration */}
-          {/* Changed: removed 'hidden md:block' and added mobile styling */}
           <motion.div
             variants={itemVariants}
             className="block relative h-full order-2 md:order-2"
@@ -103,7 +102,7 @@ export const Hero: React.FC<HeroProps> = ({ onShopClick }) => {
               className="relative"
             >
               <Image
-                src="/hero1.png" 
+                src="/hero image.jpg" 
                 alt="Mam's Enterprise Products" 
                 width={500}
                 height={320}

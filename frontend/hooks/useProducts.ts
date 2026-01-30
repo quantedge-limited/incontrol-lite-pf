@@ -3,6 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { productApi } from '@/lib/api/productApi'; // Import productApi
 import { cartApi } from '@/lib/api/sales'; // Import cartApi if needed
 
+{/*
+  
+  useProducts hook returns a query object for fetching product data.
+  It uses productApi.list to fetch the list of products.
+  */}
+  
+
 export const useProducts = () => {
   const queryClient = useQueryClient();
   

@@ -23,6 +23,12 @@ import { inventoryApi } from "@/lib/api/inventoryApi";
 import { toast } from "react-toastify";
 import type { Order } from "@/lib/api/salesApi";
 
+{/*
+  
+  This component renders the main sales dashboard for the admin panel.
+  It displays key sales metrics, a chart of monthly sales trends, and a table of recent orders.
+  */}
+
 // Define stats interface locally since we removed it from the API
 interface SalesStats {
   total_revenue: number;

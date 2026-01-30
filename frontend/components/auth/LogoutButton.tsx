@@ -3,6 +3,13 @@
 import { LogOut } from 'lucide-react';
 import { logout } from '@/lib/auth/logout';
 
+{/*
+  
+  LogoutButton component renders a button that triggers the logout process.
+  It confirms with the user before proceeding with logout.
+  
+  */}
+
 export default function LogoutButton() {
   const handleLogout = () => {
     if (confirm('Are you sure you want to logout?')) {

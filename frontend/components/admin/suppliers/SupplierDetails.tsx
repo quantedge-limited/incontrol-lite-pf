@@ -16,6 +16,19 @@ import {
   TrendingUp
 } from 'lucide-react';
 
+{/*
+  
+  This component renders detailed information about a specific supplier.
+  It displays key statistics such as total amount spent, number of items purchased, 
+  and recent purchase activity. Users can also add new purchases associated with the supplier.
+
+  Key Features:
+  - Fetches and displays purchases related to the supplier.
+  - Calculates and shows total spent, total items, and recent purchases.
+  - Provides a form to add new purchases.
+  - Allows deletion of existing purchases.    
+*/}
+
 interface SupplierDetailsProps {
   supplier: Supplier;
   onClose: () => void;

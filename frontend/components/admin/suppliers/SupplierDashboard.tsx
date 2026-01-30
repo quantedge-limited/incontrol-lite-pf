@@ -9,6 +9,16 @@ import { authApi } from '@/lib/api/authApi';
 import { AnimatePresence } from 'framer-motion';
 import { Phone, Mail, MapPin } from 'lucide-react';
 
+{/*
+  
+  This component renders the main supplier dashboard for the admin panel. It includes:
+  - Fetching and displaying a list of suppliers
+  - Search functionality to filter suppliers
+  - Buttons to add, edit, and delete suppliers
+  - A form modal for adding/editing suppliers with authentication checks
+
+*/}
+
 export default function SupplierDashboard() {
   const router = useRouter();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);

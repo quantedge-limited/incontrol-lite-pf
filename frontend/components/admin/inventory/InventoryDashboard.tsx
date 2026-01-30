@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -144,6 +144,21 @@ export default function InventoryDashboard() {
     inventory.map(item => item.brand_name).filter(Boolean)
   ));
 
+  // Ref & auto-scroll when form opens (improves mobile UX)
+  const formRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showForm) return;
+    const t = setTimeout(() => {
+      // On small screens center the form in viewport, otherwise align to start
+      const block: ScrollLogicalPosition = (typeof window !== 'undefined' && window.innerWidth < 768) ? 'center' : 'start';
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block });
+      const first = formRef.current?.querySelector('input, textarea, select, button') as HTMLElement | null;
+      first?.focus?.();
+    }, 120);
+    return () => clearTimeout(t);
+  }, [showForm]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -180,13 +195,33 @@ export default function InventoryDashboard() {
                 setEditingItem(null);
                 setShowForm(true);
               }}
-              className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 whitespace-nowrap"
+              className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm md:text-base font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 whitespace-nowrap"
             >
               <Plus className="h-5 w-5" />
               Add Inventory Item
             </button>
           </div>
         </motion.div>
+
+        {/* Inventory Form */}
+        <AnimatePresence>
+          {showForm && (
+            <motion.div
+              ref={formRef}
+              layout
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6 overflow-hidden"
+            >
+              <InventoryForm
+                item={editingItem}
+                onSave={handleSaveItem}
+                onCancel={handleCancel}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Stats Cards */}
         <motion.div
@@ -323,23 +358,7 @@ export default function InventoryDashboard() {
           </div>
         </motion.div>
 
-        {/* Inventory Form */}
-        <AnimatePresence>
-          {showForm && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-8 overflow-hidden"
-            >
-              <InventoryForm
-                item={editingItem}
-                onSave={handleSaveItem}
-                onCancel={handleCancel}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Inventory Form moved above header to ensure it appears at the top on mobile */}
 
         {/* Inventory Table */}
         <motion.div
@@ -507,7 +526,7 @@ export default function InventoryDashboard() {
                 {!showForm && !searchTerm && !filterBrand && filterStock === 'all' && (
                   <button
                     onClick={() => setShowForm(true)}
-                    className="px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 inline-flex items-center gap-2"
+                    className="px-4 py-2 md:px-6 md:py-3 bg-emerald-600 text-white text-sm md:text-base font-medium rounded-lg hover:bg-emerald-700 inline-flex items-center gap-2"
                   >
                     
                     <Plus className="h-5 w-5" />

@@ -1,6 +1,4 @@
-// lib/api/supplierApi.ts - CORRECTED
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
-
+const API_BASE=process.env.NEXT_PUBLIC_API_BASE_URL;
 import { authApi } from './authApi';
 
 export interface Supplier {
@@ -20,7 +18,7 @@ export interface Supplier {
   };
 }
 
-// Define the type used for creating/updating suppliers
+// Data used for create / update
 export interface SupplierFormData {
   name: string;
   email?: string;
@@ -29,132 +27,142 @@ export interface SupplierFormData {
   additional_info?: any;
 }
 
+// Small helper to enforce auth
+function getHeadersOrThrow() {
+  if (!authApi.isAuthenticated()) {
+    throw new Error('Not authenticated');
+  }
+  return authApi.getAuthHeaders();
+}
+
 export const supplierApi = {
-  // Create supplier
-  async create(supplierData: SupplierFormData): Promise<Supplier> {
-    const headers = authApi.getAuthHeaders();
+  // --- Create supplier ---
+  async create(data: SupplierFormData): Promise<Supplier> {
+    const headers = getHeadersOrThrow();
+
     const res = await fetch(`${API_BASE}/staff/suppliers/create/`, {
       method: 'POST',
-      headers: headers,
-      body: JSON.stringify(supplierData),
+      headers,
+      body: JSON.stringify(data),
     });
 
     if (!res.ok) {
-      const error = await res.json().catch(() => ({ 
-        detail: 'Failed to create supplier' 
+      const error = await res.json().catch(() => ({
+        detail: 'Failed to create supplier',
       }));
-      throw new Error(error.detail || 'Failed to create supplier');
+      throw new Error(error.detail);
     }
 
     return res.json();
   },
 
-  // List all suppliers
+  // --- List suppliers ---
   async list(): Promise<Supplier[]> {
-    const headers = authApi.getAuthHeaders();
-    const res = await fetch(`${API_BASE}/staff/suppliers/`, {
-      headers: headers,
-    });
+    const headers = getHeadersOrThrow();
+
+    const res = await fetch(`${API_BASE}/staff/suppliers/`, { headers });
 
     if (!res.ok) {
-      const error = await res.json().catch(() => ({ 
-        detail: 'Failed to fetch suppliers' 
+      const error = await res.json().catch(() => ({
+        detail: 'Failed to fetch suppliers',
       }));
-      throw new Error(error.detail || 'Failed to fetch suppliers');
+      throw new Error(error.detail);
     }
 
     return res.json();
   },
 
-  // Get single supplier
+  // --- Get one supplier ---
   async get(id: number): Promise<Supplier> {
-    const headers = authApi.getAuthHeaders();
-    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/`, {
-      headers: headers,
-    });
+    const headers = getHeadersOrThrow();
+
+    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/`, { headers });
 
     if (!res.ok) {
-      if (res.status === 404) {
-        throw new Error('Supplier not found');
-      }
-      const error = await res.json().catch(() => ({ 
-        detail: 'Failed to fetch supplier' 
+      if (res.status === 404) throw new Error('Supplier not found');
+      const error = await res.json().catch(() => ({
+        detail: 'Failed to fetch supplier',
       }));
-      throw new Error(error.detail || 'Failed to fetch supplier');
+      throw new Error(error.detail);
     }
 
     return res.json();
   },
 
-  // Update supplier
+  // --- Update supplier ---
   async update(
     id: number,
-    supplierData: Partial<SupplierFormData>
+    data: Partial<SupplierFormData>
   ): Promise<Supplier> {
-    const headers = authApi.getAuthHeaders();
-    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/update/`, {
-      method: 'PUT',
-      headers: headers,
-      body: JSON.stringify(supplierData),
-    });
+    const headers = getHeadersOrThrow();
+
+    const res = await fetch(
+      `${API_BASE}/staff/suppliers/${id}/update/`,
+      {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!res.ok) {
-      if (res.status === 404) {
-        throw new Error('Supplier not found');
-      }
-      const error = await res.json().catch(() => ({ 
-        detail: 'Failed to update supplier' 
+      if (res.status === 404) throw new Error('Supplier not found');
+      const error = await res.json().catch(() => ({
+        detail: 'Failed to update supplier',
       }));
-      throw new Error(error.detail || 'Failed to update supplier');
+      throw new Error(error.detail);
     }
 
     return res.json();
   },
 
-  // Delete supplier
+  // --- Delete supplier ---
   async delete(id: number): Promise<void> {
-    const headers = authApi.getAuthHeaders();
-    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/delete/`, {
-      method: 'DELETE',
-      headers: headers,
-    });
+    const headers = getHeadersOrThrow();
+
+    const res = await fetch(
+      `${API_BASE}/staff/suppliers/${id}/delete/`,
+      {
+        method: 'DELETE',
+        headers,
+      }
+    );
 
     if (!res.ok) {
-      if (res.status === 404) {
-        throw new Error('Supplier not found');
-      }
-      const error = await res.json().catch(() => ({ 
-        detail: 'Failed to delete supplier' 
+      if (res.status === 404) throw new Error('Supplier not found');
+      const error = await res.json().catch(() => ({
+        detail: 'Failed to delete supplier',
       }));
-      throw new Error(error.detail || 'Failed to delete supplier');
+      throw new Error(error.detail);
     }
   },
 
-  // Optional: Search suppliers
+  // --- Search suppliers ---
   async search(query: string): Promise<Supplier[]> {
-    const headers = authApi.getAuthHeaders();
-    
-    // If you have a search endpoint
+    const headers = getHeadersOrThrow();
+
     try {
       const res = await fetch(
         `${API_BASE}/staff/suppliers/search/?q=${encodeURIComponent(query)}`,
         { headers }
       );
-      
+
       if (res.ok) {
         return res.json();
       }
     } catch {
-      // Fall through to client-side filtering
+      // fallback below
     }
-    
-    // Fallback to client-side filtering
-    const allSuppliers = await this.list();
-    const lowerQuery = query.toLowerCase();
-    return allSuppliers.filter(supplier =>
-      supplier.name.toLowerCase().includes(lowerQuery) ||
-      (supplier.email && supplier.email.toLowerCase().includes(lowerQuery)) ||
-      (supplier.phone_number && supplier.phone_number.toLowerCase().includes(lowerQuery))
+
+    // Client-side fallback
+    const all = await this.list();
+    const q = query.toLowerCase();
+
+    return all.filter(
+      s =>
+        s.name.toLowerCase().includes(q) ||
+        (s.email && s.email.toLowerCase().includes(q)) ||
+        (s.phone_number && s.phone_number.toLowerCase().includes(q))
     );
   },
 };

@@ -4,6 +4,14 @@ import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/context/cart/CartContext';
 
+{/*
+  
+  CartIcon component renders a shopping cart icon with a badge showing 
+  the number of items in the cart.
+  It links to the cart page and shows loading state when cart is being fetched.
+  
+  */}
+
 export default function CartIcon() {
   const { cartCount, isLoading } = useCart();
 

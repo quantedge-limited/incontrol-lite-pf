@@ -5,6 +5,12 @@ import { useState } from 'react';
 import { Supplier } from './types';
 import { supplierApi, SupplierFormData as ApiSupplierFormData } from '@/lib/api/supplierApi';
 
+{/*
+  SupplierFormProps defines the props for the SupplierForm component.
+  This component is used for both creating a new supplier and editing an existing one.
+  
+  */}
+
 interface SupplierFormProps {
   onSave: () => void;
   editSupplier?: Supplier | null;

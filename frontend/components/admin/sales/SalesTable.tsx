@@ -2,6 +2,12 @@
 
 import { Order } from "@/lib/api/salesApi";
 
+{/*
+  
+  This component renders a table of sales orders for the admin sales dashboard.
+  It displays key information about each order including date, customer, status, items, and total.
+  */}
+
 interface SalesTableProps {
   sales: Order[];
 }

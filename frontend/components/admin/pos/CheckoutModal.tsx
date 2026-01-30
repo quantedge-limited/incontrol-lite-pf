@@ -6,6 +6,12 @@ import { X, CreditCard, Smartphone, Wallet, User, Phone, Mail, MapPin } from 'lu
 import { useState } from 'react';
 import { POSCartItem, CustomerData } from '@/types/pos';
 
+{/*
+  
+  This component renders a checkout modal for the POS system. It collects customer information and payment method,
+  and allows the user to complete the checkout process.
+  */}
+
 interface CheckoutModalProps {
   onClose: () => void;
   onCheckout: (customerData: CustomerData) => Promise<void>;
@@ -52,7 +58,7 @@ export default function CheckoutModal({
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-white/10 backdrop-blur-md flex items-center justify-center z-50 p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}

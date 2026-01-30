@@ -3,6 +3,13 @@
 import { Supplier } from './types';
 import { Building2, Phone, Mail, MapPin } from 'lucide-react';
 
+{/*
+  
+  SuppliersTableProps defines the props for the SuppliersTable component.
+  This component displays a table of suppliers with their details and action buttons.
+  
+  */}
+
 interface SuppliersTableProps {
   suppliers: Supplier[];
   onView: (supplier: Supplier) => void;

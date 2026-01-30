@@ -32,3 +32,8 @@ export default function RootLayout({
     </html>
   );
 }
+
+{/*
+  This updated RootLayout is the "master wrapper" for your entire Next.js application. While your previous version used local state to open a cart sidebar, this version changes the strategy: 
+  it now treats the cart as a full-page destination and wraps the app in essential global services.
+  */}

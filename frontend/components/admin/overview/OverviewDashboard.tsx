@@ -8,6 +8,12 @@ import SalesChart from '../sales/SalesChart';
 import { salesApi } from '@/lib/api/salesApi';
 import { inventoryApi } from '@/lib/api/inventoryApi';
 
+{/*
+  
+  This component renders the main overview dashboard for the admin panel. It fetches sales and inventory data,
+  calculates key performance indicators (KPIs), and displays them in a user-friendly format with charts and links
+  to detailed sections. It includes error handling and loading states for better UX. */}
+
 // Define a local interface for fallback stats
 interface LocalSalesStats {
   total_revenue: number;

@@ -1,3 +1,11 @@
+
+{/*
+  This code defines the Data Architecture and Utility Logic for the clients section 
+  of your application. It acts as the "source of truth" for how a client is represented 
+  in TypeScript, 
+  ensuring that your frontend and backend stay synchronized.
+  */}
+
 export interface Client {
   id: string;  // UUID from backend
   first_name: string;

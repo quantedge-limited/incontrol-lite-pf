@@ -1,3 +1,15 @@
+
+{/*
+  
+  Supplier interface defines the structure of a supplier object.
+  The id field is a UUID string.
+  The email, phone_number, and address fields are optional and can be null.
+  The additional_info field is any type and can be null.
+  The created_at and updated_at fields are ISO date strings.
+  The created_by field is an object with id, email, first_name, and last_name fields.
+  
+  */}
+
 export interface Supplier {
   id: string; 
   name: string;

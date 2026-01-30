@@ -116,7 +116,7 @@ export const ProductsList: React.FC<ProductsListProps> = ({ onAddToCart }) => {
   }
 
   return (
-    <section className="max-w-7xl mx-auto px-4 py-12">
+    <section id='product-list' className="max-w-7xl mx-auto px-4 py-12">
       {/* Header */}
       <div className="text-center mb-10">
         <h2 className="text-3xl md:text-4xl font-bold mb-3">

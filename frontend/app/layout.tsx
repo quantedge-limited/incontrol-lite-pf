@@ -6,7 +6,7 @@ import './globals.css';
 import { CartProvider } from '@/context/cart/CartContext';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useRouter } from 'next/navigation'; // Add this
+import { useRouter } from 'next/navigation'; 
 
 const inter = Inter({ subsets: ['latin'] });
 

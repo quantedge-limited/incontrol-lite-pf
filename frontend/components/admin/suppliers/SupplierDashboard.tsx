@@ -7,7 +7,7 @@ import { Supplier } from './types';
 import { supplierApi } from '@/lib/api/supplierApi';
 import { authApi } from '@/lib/api/authApi';
 import { AnimatePresence } from 'framer-motion';
-import { Phone, Mail, MapPin } from 'lucide-react';
+import { Phone, Mail, MapPin, Plus } from 'lucide-react';
 
 {/*
   
@@ -31,11 +31,13 @@ export default function SupplierDashboard() {
   // 🔐 Auth-safe fetch
   const fetchSuppliers = async () => {
     try {
+
       if (!authApi.isAuthenticated()) {
         authApi.logout();
         router.push('/login');
         return;
       }
+
       const data = await supplierApi.list();
       setSuppliers(data);
       setFilteredSuppliers(data);
@@ -104,16 +106,19 @@ export default function SupplierDashboard() {
       <div className="max-w-7xl mx-auto px-4 py-8">
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <h1 className="text-3xl font-bold text-emerald-900">Supplier Management</h1>
+
           <button
             onClick={() => {
               setEditingSupplier(null);
               setShowForm(true);
             }}
-            className="px-6 py-3 bg-emerald-600 text-white rounded-lg"
+            className="w-full sm:w-auto px-4 py-2 md:px-6 md:py-3 bg-emerald-600 text-white rounded-lg shadow hover:bg-emerald-700 transition inline-flex items-center justify-center gap-2 text-sm md:text-base font-medium"
           >
-            Add Supplier
+            <Plus className="h-4 w-4 md:h-5 md:w-5" />
+            <span className="hidden sm:inline">Add Supplier</span>
+            <span className="sm:hidden">Add Supplier</span>
           </button>
         </div>
 

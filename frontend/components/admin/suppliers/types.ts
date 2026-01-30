@@ -50,8 +50,8 @@ export const formatAdditionalInfo = (info: any): string => {
 };
 
 export interface Purchase {
-  id: number; // Changed from string to number if Django uses <int:pk>
-  supplier_id: number; // Changed from string to number
+  id: string;
+  supplier_id: string; 
   supplier_name: string;
   product_name: string;
   quantity: number;

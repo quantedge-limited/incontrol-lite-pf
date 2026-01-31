@@ -4,6 +4,15 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { cartApi } from '@/lib/api/sales';
 import { toast } from 'react-toastify';
 
+{/*
+  
+  CartContext provides a context for managing the shopping cart state.
+   It includes functions to add, update, remove items, clear the cart, 
+   and refresh the cart data from the backend API. It also handles loading and error states, 
+   and provides user feedback via toast notifications.
+
+*/}
+
 // Define the cart structure
 export interface CartItem {
   id: string;

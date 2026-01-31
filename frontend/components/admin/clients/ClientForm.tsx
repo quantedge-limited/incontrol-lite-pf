@@ -1,9 +1,14 @@
+
 "use client";
 
 import { useState } from 'react';
 import { ClientFormData, Client } from './types';
 import { clientApi } from '@/lib/api/clientApi';
-
+{/*
+  This code defines a Client-Side Form Component for managing client information. 
+  In the context of your project, this is the 
+  interface used to either add a new customer or update an existing one in your database.
+  */}
 
 
 interface ClientFormProps {

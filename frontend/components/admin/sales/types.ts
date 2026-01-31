@@ -1,3 +1,8 @@
+{/*
+  
+  This file defines TypeScript types for sales data in the admin panel.
+  */}
+
 export type Sale = {
   id: string;
   date: string; // ISO
@@ -9,3 +14,4 @@ export type Sale = {
 };
 
 export const SALES_STORAGE_KEY = 'incontrol_sales_v1';
+

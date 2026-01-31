@@ -2,6 +2,12 @@
 
 import React from 'react';
 
+{/*
+  
+  This component renders the sales filters for the admin sales dashboard. 
+  It includes a dropdown to select the month for filtering sales data.  
+*/}
+
 export default function SalesFilters({
   month,
   months,

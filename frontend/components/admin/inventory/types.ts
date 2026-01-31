@@ -1,3 +1,10 @@
+
+{/*
+  
+  This file defines TypeScript interfaces for inventory-related data structures.
+  It includes interfaces for InventoryItem, InventoryFormData, InventoryCategory, InventoryStats, and Product.
+  */}
+
 export interface InventoryItem {
   id: string;
   brand_name: string;

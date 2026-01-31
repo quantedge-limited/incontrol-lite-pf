@@ -3,6 +3,15 @@
 
 import { Product } from './types';
 
+{/*
+  
+  This component displays low stock alerts for inventory items.
+  It takes an array of products and a threshold value (default is 5).
+  It filters products where quantity_in_stock is less than or equal to the threshold.
+  If no products are below the threshold, it returns null (no alert).
+  Otherwise, it renders a styled alert box with a list of low stock items.
+  */}
+
 export default function LowStockAlert({ products, threshold = 5 }: { products: Product[]; threshold?: number }) {
   // Use quantity_in_stock instead of quantity
   const low = products.filter((p) => p.quantity_in_stock <= threshold);

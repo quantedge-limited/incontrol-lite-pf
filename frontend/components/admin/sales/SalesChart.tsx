@@ -2,6 +2,12 @@
 
 import React from 'react';
 
+{/*
+  
+  This component renders a small lightweight SVG line chart for monthly sales totals (last 12 months).
+  It displays a line graph with grid lines, a filled area beneath the line, and data points.
+  */}
+
 // Small lightweight SVG line chart for monthly totals (last 12 months)
 export default function SalesChart({
   months,

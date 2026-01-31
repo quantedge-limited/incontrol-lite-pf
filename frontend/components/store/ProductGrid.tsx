@@ -5,9 +5,16 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useInView } from 'react-intersection-observer';
 import { useEffect } from 'react';
 
+{/*
+  
+  ProductGrid component displays a grid of products fetched from an API. 
+  It uses infinite scrolling to load more products as the user scrolls down.
+
+*/}
+
 // Create a fetch function that handles pagination
 async function fetchProducts({ pageParam = 1 }: { pageParam: number }) {
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
   const pageSize = 20;
   
   const response = await fetch(

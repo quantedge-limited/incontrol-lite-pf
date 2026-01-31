@@ -4,6 +4,15 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { posApi, Sale } from '@/lib/api/sales';
 
+{/*
+  
+  PosContext provides a context for managing POS (Point of Sale) related state. It includes:
+  - sales: List of sales records.
+  - loading: Boolean indicating if a request is in progress.    
+  - error: Error message if any operation fails.
+  - selectedSale: Currently selected sale record.
+*/}
+
 interface PosContextType {
   sales: Sale[];
   loading: boolean;

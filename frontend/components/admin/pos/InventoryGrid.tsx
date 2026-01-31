@@ -5,6 +5,14 @@ import { motion } from 'framer-motion';
 import { ShoppingBag, Package, Tag } from 'lucide-react';
 import type { InventoryItem } from '@/lib/api/inventoryApi';
 
+{/*
+  
+  This component renders a grid of inventory items for the POS system. 
+  It displays product images, names, prices, and stock status. It also includes an "Add to Cart" 
+  button for each item, which is disabled if the item is out of stock or inactive.
+
+*/}
+
 interface InventoryGridProps {
   inventory: InventoryItem[];
   loading: boolean;
@@ -38,7 +46,7 @@ export default function InventoryGrid({ inventory, loading, onAddToCart }: Inven
         const imageUrl = item.image 
           ? item.image.startsWith('http') 
             ? item.image 
-            : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}${item.image}`
+            : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api'}${item.image}`
           : undefined;
 
         return (
@@ -52,6 +60,7 @@ export default function InventoryGrid({ inventory, loading, onAddToCart }: Inven
             {/* Product Image */}
             <div className="relative aspect-square rounded-t-2xl overflow-hidden bg-gray-100">
               {imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={imageUrl}
                   alt={item.brand_name} // Use brand_name instead of name

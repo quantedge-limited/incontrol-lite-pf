@@ -1,15 +1,14 @@
-// lib/api/clientApi.ts - CORRECTED
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 import { authApi } from './authApi';
 
 // Update interface to match Django serializer fields
 export interface Client {
-  id: string;
+  id: number;
   first_name: string;
   last_name: string;
   email?: string;
-  phone_number?: string;  // Changed from "phone" to "phone_number"
+  phone_number?: string; 
   address?: string;
   additional_info?: string;
   created_at: string;
@@ -37,7 +36,7 @@ export const clientApi = {
   },
 
   // Get single client
-  async get(id: string): Promise<Client> {
+  async get(id: number): Promise<Client> {
     const headers = authApi.getAuthHeaders();
     const res = await fetch(`${API_BASE}/staff/clients/${id}/`, {
       method: 'GET',
@@ -50,7 +49,7 @@ export const clientApi = {
     return res.json();
   },
 
-  // Create client - send phone_number, not phone
+  // Create client
   async create(clientData: Partial<Client>): Promise<Client> {
     // Remove any "phone" field since backend expects "phone_number"
     const { phone, ...dataWithoutPhone } = clientData as any;
@@ -80,7 +79,7 @@ export const clientApi = {
   },
 
   // Update client
-  async update(id: string, clientData: Partial<Client>): Promise<Client> {
+  async update(id: number, clientData: Partial<Client>): Promise<Client> {
     // Remove any "phone" field since backend expects "phone_number"
     const { phone, ...dataWithoutPhone } = clientData as any;
     const backendData = { ...dataWithoutPhone };
@@ -91,7 +90,7 @@ export const clientApi = {
     }
 
     const headers = authApi.getAuthHeaders();
-    const res = await fetch(`${API_BASE}/staff/clients/${id}/update/`, {
+    const res = await fetch(`${API_BASE}/staff/clients/${id}/`, {
       method: 'PUT',
       headers: {
         ...headers,
@@ -109,9 +108,9 @@ export const clientApi = {
   },
 
   // Delete client
-  async delete(id: string): Promise<void> {
+  async delete(id: number): Promise<void> {
     const headers = authApi.getAuthHeaders();
-    const res = await fetch(`${API_BASE}/staff/clients/${id}/delete/`, {
+    const res = await fetch(`${API_BASE}/staff/clients/${id}/`, {
       method: 'DELETE',
       headers: headers,
     });

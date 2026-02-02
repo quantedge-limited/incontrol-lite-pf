@@ -7,7 +7,7 @@
   */}
 
 export interface Client {
-  id: string;  // UUID from backend
+  id: number; 
   first_name: string;
   last_name: string;
   email?: string;

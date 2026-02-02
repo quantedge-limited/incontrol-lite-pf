@@ -5,13 +5,6 @@ import ClientForm from './ClientForm';
 import { Client } from './types';
 import { clientApi } from '@/lib/api/clientApi';
 
-{/*
-  This code defines the ClientsDashboard, the primary administrative 
-  interface for managing your customer database. It acts as the "parent" 
-  component that coordinates between 
-  the list of clients and the form used to create or edit them.
-  */}
-
 export default function ClientsDashboard() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +26,7 @@ export default function ClientsDashboard() {
     fetchClients();
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this client?')) {
       try {
         await clientApi.delete(id);

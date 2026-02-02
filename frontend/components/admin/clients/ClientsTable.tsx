@@ -6,7 +6,7 @@ interface ClientsTableProps {
   clients: Client[];
   onView: (client: Client) => void;
   onEdit: (client: Client) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: number) => void;
   onSearch: (query: string) => void;
 }
 

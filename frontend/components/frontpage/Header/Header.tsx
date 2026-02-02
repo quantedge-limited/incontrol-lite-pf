@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
           {/* Logo */}
           <div className="flex items-center">
             <h1 className="text-2xl font-bold" style={{ color: "#0091AD" }}>
-              Mam&apos;s Enterprise
+              MAM&apos;s Enterprise
             </h1>
           </div>
 
@@ -89,13 +89,6 @@ export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
               >
                 Home
               </Link>
-              <a
-                href="#products"
-                className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Products
-              </a>
               <Link
                 href="/about"
                 className="text-gray-700 hover:text-[#0091AD] font-medium px-4 py-2"

@@ -38,7 +38,7 @@ export const productApi = {
   // Get products for customers (public endpoint)
   async getCustomerProducts(): Promise<FrontendProduct[]> {
     try {
-      const res = await fetch(`${API_BASE}/inventory/items/`, {
+      const res = await fetch(`${API_BASE}/inventory/products/`, {
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -85,7 +85,7 @@ export const productApi = {
 
   // Get single product for customers (public endpoint)
   async getCustomerProduct(id: string): Promise<FrontendProduct> {
-    const res = await fetch(`${API_BASE}/inventory/items/${id}/`, {
+    const res = await fetch(`${API_BASE}/inventory/products/${id}/`, {
       headers: { 'Content-Type': 'application/json' },
     });
 

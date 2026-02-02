@@ -22,7 +22,7 @@ export interface AuthResponse {
 export const authApi = {
   // --- Request OTP ---
   async requestOTP(email: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/staff/request-otp/`, {
+    const res = await fetch(`${API_BASE}/staff/auth/request_otp/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),
@@ -36,7 +36,7 @@ export const authApi = {
 
   // --- Verify OTP ---
   async verifyOTP(email: string, otp: string): Promise<AdminUser> {
-    const res = await fetch(`${API_BASE}/staff/verify-otp/`, {
+    const res = await fetch(`${API_BASE}/staff/auth/verify_otp/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, otp }),
@@ -58,7 +58,7 @@ export const authApi = {
 
   // --- Refresh token ---
   async refreshToken(refreshToken: string): Promise<{ access: string }> {
-    const res = await fetch(`${API_BASE}/staff/token/refresh/`, {
+    const res = await fetch(`${API_BASE}/staff/auth/token/refresh/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh: refreshToken }),

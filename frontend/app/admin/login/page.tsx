@@ -52,7 +52,7 @@ export default function AdminAuthPage() {
     setLoading(true);
     try {
       // ✅ Use direct Django URL
-      const response = await fetch(`${API_BASE}/staff/request-otp/`, {
+      const response = await fetch(`${API_BASE}/staff/auth/request_otp/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export default function AdminAuthPage() {
     setLoading(true);
     try {
       // ✅ Use direct Django URL
-      const response = await fetch(`${API_BASE}/staff/verify-otp/`, {
+      const response = await fetch(`${API_BASE}/staff/auth/verify_otp/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

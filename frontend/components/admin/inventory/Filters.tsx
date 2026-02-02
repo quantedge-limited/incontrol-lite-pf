@@ -2,6 +2,15 @@
 
 import React from 'react';
 
+{/*
+  This code defines a Filtering Component for your product inventory. 
+  It allows users to narrow down a large list of products using three criteria: 
+  Text Search, Brand, and Supplier.
+
+In your project, this is likely used on the main inventory dashboard to help staff 
+quickly find specific items
+  */}
+
 export default function Filters({
   query,
   onQuery,

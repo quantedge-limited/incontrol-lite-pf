@@ -14,7 +14,7 @@ interface SuppliersTableProps {
   suppliers: Supplier[];
   onView: (supplier: Supplier) => void;
   onEdit: (supplier: Supplier) => void;
-  onDelete: (id: string) => void; // ✅ UUID
+  onDelete: (id: number) => void; 
   onSearch: (query: string) => void;
 }
 

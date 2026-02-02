@@ -1,33 +1,13 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { Supplier, Purchase } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Building2,
-  Phone,
-  Mail,
-  MapPin,
-  Package,
-  DollarSign,
-  X,
-  Plus,
   ShoppingCart,
-  TrendingUp
+  Plus,
+  X,
 } from 'lucide-react';
-
-{/*
-  
-  This component renders detailed information about a specific supplier.
-  It displays key statistics such as total amount spent, number of items purchased, 
-  and recent purchase activity. Users can also add new purchases associated with the supplier.
-
-  Key Features:
-  - Fetches and displays purchases related to the supplier.
-  - Calculates and shows total spent, total items, and recent purchases.
-  - Provides a form to add new purchases.
-  - Allows deletion of existing purchases.    
-*/}
 
 interface SupplierDetailsProps {
   supplier: Supplier;
@@ -44,16 +24,16 @@ export default function SupplierDetails({
   const [loading, setLoading] = useState(true);
   const [addingPurchase, setAddingPurchase] = useState(false);
 
-  // Purchase form state
+  // Form state
   const [productName, setProductName] = useState('');
-  const [quantity, setQuantity] = useState(1);
-  const [amount, setAmount] = useState(0);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [amount, setAmount] = useState<number>(0);
   const [purchaseDate, setPurchaseDate] = useState(
     new Date().toISOString().split('T')[0]
   );
   const [notes, setNotes] = useState('');
 
-  // Fetch purchases (localStorage fallback)
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem(`purchases_${supplier.id}`);
@@ -67,7 +47,7 @@ export default function SupplierDetails({
     }
   }, [supplier.id]);
 
-  // Totals
+
   const totals = {
     totalPaid: purchases.reduce((s, p) => s + p.amount, 0),
     totalItems: purchases.reduce((s, p) => s + p.quantity, 0),
@@ -79,8 +59,8 @@ export default function SupplierDetails({
     }).length,
   };
 
-  // Add purchase
-  const handleAddPurchase = async (e: React.FormEvent) => {
+
+  const handleAddPurchase = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!productName.trim() || amount <= 0) {
@@ -89,8 +69,8 @@ export default function SupplierDetails({
     }
 
     const newPurchase: Purchase = {
-      id: crypto.randomUUID(), // ✅ UUID string
-      supplier_id: supplier.id, // ✅ UUID string
+      id: Date.now(),                 // ✅ numeric ID
+      supplier_id: supplier.id,       // ✅ numeric FK
       supplier_name: supplier.name,
       product_name: productName,
       quantity,
@@ -116,8 +96,8 @@ export default function SupplierDetails({
     onRefresh?.();
   };
 
-  // Delete purchase
-  const handleDeletePurchase = async (purchaseId: string) => {
+
+  const handleDeletePurchase = (purchaseId: number) => {
     if (!confirm('Delete this purchase?')) return;
 
     const updated = purchases.filter(p => p.id !== purchaseId);
@@ -127,6 +107,7 @@ export default function SupplierDetails({
       JSON.stringify(updated)
     );
   };
+
 
   if (loading) {
     return (
@@ -147,7 +128,7 @@ export default function SupplierDetails({
         className="bg-white rounded-2xl max-w-4xl mx-auto"
       >
         {/* Header */}
-        <div className="p-6 border-b flex justify-between">
+        <div className="p-6 border-b flex justify-between items-center">
           <h2 className="text-2xl font-bold">{supplier.name}</h2>
           <button onClick={onClose}>
             <X />
@@ -164,12 +145,12 @@ export default function SupplierDetails({
         {/* Purchases */}
         <div className="p-6">
           <div className="flex justify-between mb-4">
-            <h3 className="font-semibold flex gap-2">
+            <h3 className="font-semibold flex gap-2 items-center">
               <ShoppingCart /> Purchases
             </h3>
             <button
               onClick={() => setAddingPurchase(true)}
-              className="bg-emerald-600 text-white px-4 py-2 rounded-lg"
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
             >
               <Plus /> Add
             </button>
@@ -208,27 +189,30 @@ export default function SupplierDetails({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="p-6 bg-emerald-50"
+              className="p-6 bg-emerald-50 space-y-3"
             >
               <input
-                placeholder="Product"
+                className="w-full border p-2 rounded"
+                placeholder="Product name"
                 value={productName}
                 onChange={e => setProductName(e.target.value)}
                 required
               />
               <input
+                className="w-full border p-2 rounded"
                 type="number"
-                value={quantity}
-                onChange={e => setQuantity(+e.target.value)}
                 min={1}
+                value={quantity}
+                onChange={e => setQuantity(Number(e.target.value))}
               />
               <input
+                className="w-full border p-2 rounded"
                 type="number"
-                value={amount}
-                onChange={e => setAmount(+e.target.value)}
                 min={0}
+                value={amount}
+                onChange={e => setAmount(Number(e.target.value))}
               />
-              <button className="mt-2 bg-emerald-600 text-white px-4 py-2 rounded">
+              <button className="bg-emerald-600 text-white px-4 py-2 rounded">
                 Save
               </button>
             </motion.form>
@@ -238,6 +222,7 @@ export default function SupplierDetails({
     </div>
   );
 }
+
 
 function Stat({ label, value }: { label: string; value: any }) {
   return (

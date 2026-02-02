@@ -5,7 +5,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 // Supplier type aligned with Django (UUID string)
 export interface Supplier {
-  id: string; // ✅ UUID
+  id: number;
   name: string;
   email?: string | null;
   phone_number?: string | null;
@@ -62,7 +62,7 @@ export const supplierApi = {
     return res.json();
   },
 
-  async get(id: string): Promise<Supplier> {
+  async get(id: number): Promise<Supplier> {
     const headers = getHeadersOrThrow();
     const res = await fetch(`${API_BASE}/staff/suppliers/${id}/`, { headers });
     if (!res.ok) {
@@ -73,9 +73,9 @@ export const supplierApi = {
     return res.json();
   },
 
-  async update(id: string, data: Partial<SupplierFormData>): Promise<Supplier> {
+  async update(id: number, data: Partial<SupplierFormData>): Promise<Supplier> {
     const headers = getHeadersOrThrow();
-    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/update/`, {
+    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/`, {
       method: 'PUT',
       headers,
       body: JSON.stringify(data),
@@ -88,9 +88,9 @@ export const supplierApi = {
     return res.json();
   },
 
-  async delete(id: string): Promise<void> {
+  async delete(id: number): Promise<void> {
     const headers = getHeadersOrThrow();
-    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/delete/`, {
+    const res = await fetch(`${API_BASE}/staff/suppliers/${id}/`, {
       method: 'DELETE',
       headers,
     });

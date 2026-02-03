@@ -1,4 +1,4 @@
-// components/admin/sales/SalesDashboard.tsx - UPDATED
+// components/admin/sales/SalesDashboard.tsx - ONLY FIX INVENTORY API CALLS
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +19,7 @@ import SalesChart from "./SalesChart";
 import SalesFilters from "./SalesFilters";
 import SalesTable from "./SalesTable";
 import { salesApi } from "@/lib/api/salesApi";
-import { inventoryApi } from "@/lib/api/inventoryApi";
+import { inventoryApi } from "@/lib/api/inventoryApi"; // Use the corrected API
 import { toast } from "react-toastify";
 import type { Order } from "@/lib/api/salesApi";
 
@@ -84,7 +84,7 @@ export default function SalesDashboard() {
         // Fetch orders (sales) and inventory in parallel
         const [ordersData, inventoryData] = await Promise.all([
           salesApi.getOrders().catch(() => []),
-          inventoryApi.list().catch(() => []),
+          inventoryApi.getProducts().catch(() => []), // FIXED: Changed from .list() to .getProducts()
         ]);
 
         setSales(ordersData);

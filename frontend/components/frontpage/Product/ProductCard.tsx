@@ -5,7 +5,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 interface ProductCardProps {
-  id: string;
+  id: number | string;
   name: string;  // Changed back to match ProductsList
   price: number;  // Changed back to match ProductsList
   description?: string;

@@ -1,3 +1,4 @@
+// components/admin/inventory/inventoryDashboard.tsx
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -19,8 +20,8 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 import InventoryForm from './InventoryForm';
-import { inventoryApi } from '@/lib/api/inventoryApi';
-import type { InventoryItem } from './types';
+import { inventoryApi, Product } from '@/lib/api/inventoryApi'; // Use Product type from API
+// Remove: import type { InventoryItem } from './types';
 
 {/*
   
@@ -34,20 +35,19 @@ import type { InventoryItem } from './types';
   */}
 
 export default function InventoryDashboard() {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>([]);
+  const [inventory, setInventory] = useState<Product[]>([]); // Changed to Product[]
+  const [filteredInventory, setFilteredInventory] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
-  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
+  const [editingItem, setEditingItem] = useState<Product | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Product | null>(null);
   
-  // Filters - remove filterSupplier since it doesn't exist
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBrand, setFilterBrand] = useState('');
   const [filterStock, setFilterStock] = useState<'all' | 'low'>('all');
 
   // Load inventory
-  //Currently the toast notifications are working properly and displayed in the frontend
   useEffect(() => {
     fetchInventory();
   }, []);
@@ -55,12 +55,37 @@ export default function InventoryDashboard() {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const data = await inventoryApi.list();
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('Please login to access inventory');
+      }
+      
+      const data = await inventoryApi.getProducts();
       setInventory(data);
       setFilteredInventory(data);
+      
     } catch (error) {
       console.error('Failed to load inventory:', error);
-      toast.error('Failed to load inventory');
+      
+      // Show appropriate error message
+      if (error instanceof Error) {
+        if (error.message.includes('login') || error.message.includes('authenticated')) {
+          toast.error('Please login to access inventory');
+          // Optional: Redirect to login page
+          // window.location.href = '/login';
+        } else if (error.message.includes('Failed to fetch')) {
+          toast.error('Cannot connect to server. Please check your connection.');
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        toast.error('Failed to load inventory');
+      }
+      
+      setInventory([]);
+      setFilteredInventory([]);
     } finally {
       setLoading(false);
     }
@@ -74,8 +99,9 @@ export default function InventoryDashboard() {
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.brand_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.product_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.description?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (item.category_details?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+        (item.category_name?.toLowerCase().includes(searchTerm.toLowerCase())) // Changed from category_details?.name
       );
     }
 
@@ -84,44 +110,44 @@ export default function InventoryDashboard() {
       filtered = filtered.filter(item => item.brand_name === filterBrand);
     }
 
-    // Stock filter - use quantity_in_stock
+    // Stock filter - use stock_qty instead of quantity_in_stock
     if (filterStock === 'low') {
-      filtered = filtered.filter(item => item.quantity_in_stock < 10);
+      filtered = filtered.filter(item => item.stock_qty < 10); // Changed from quantity_in_stock
     }
 
     setFilteredInventory(filtered);
   }, [inventory, searchTerm, filterBrand, filterStock]);
 
-  // Calculate stats - FIXED
+  // Calculate stats
   const stats = {
-    totalItems: inventory.reduce((sum, item) => sum + item.quantity_in_stock, 0),
-    totalValue: inventory.reduce((sum, item) => sum + (item.selling_price * item.quantity_in_stock), 0),
-    lowStockItems: inventory.filter(item => item.quantity_in_stock < 10).length,
-    itemsExpiringSoon: 0, // Not available in your API
-    recentAdditions: 0, // Not available in your API
+    totalItems: inventory.reduce((sum, item) => sum + item.stock_qty, 0), // Changed from quantity_in_stock
+    totalValue: inventory.reduce((sum, item) => sum + (Number(item.selling_price) * item.stock_qty), 0), // Changed to stock_qty
+    lowStockItems: inventory.filter(item => item.stock_qty < 10).length, // Changed from quantity_in_stock
+    categoriesCount: Array.from(new Set(inventory.map(item => item.category_name).filter(Boolean))).length,
+    activeItems: inventory.filter(item => item.is_active).length,
   };
 
   const handleSaveItem = async () => {
     await fetchInventory();
     setShowForm(false);
     setEditingItem(null);
-    toast.success(editingItem ? 'Inventory item updated' : 'Inventory item added');
+    toast.success(editingItem ? 'Product updated' : 'Product added');
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this inventory item?')) return;
+  const handleDelete = async (id: string | number) => { // Changed to accept number
+    if (!confirm('Are you sure you want to delete this product?')) return;
     
     try {
-      await inventoryApi.delete(id);
+      await inventoryApi.deleteProduct(id as number); // Use correct method
       await fetchInventory();
-      toast.success('Inventory item deleted');
+      toast.success('Product deleted');
     } catch (error) {
-      console.error('Failed to delete inventory item:', error);
-      toast.error('Failed to delete inventory item');
+      console.error('Failed to delete product:', error);
+      toast.error('Failed to delete product');
     }
   };
 
-  const handleEdit = (item: InventoryItem) => {
+  const handleEdit = (item: Product) => {
     setEditingItem(item);
     setShowForm(true);
   };
@@ -131,7 +157,7 @@ export default function InventoryDashboard() {
     setEditingItem(null);
   };
 
-  const handleView = (item: InventoryItem) => {
+  const handleView = (item: Product) => {
     setSelectedItem(item);
   };
 
@@ -144,13 +170,17 @@ export default function InventoryDashboard() {
     inventory.map(item => item.brand_name).filter(Boolean)
   ));
 
-  // Ref & auto-scroll when form opens (improves mobile UX)
+  // Get unique categories for display
+  const categories = Array.from(new Set(
+    inventory.map(item => item.category_name).filter(Boolean)
+  ));
+
+  // Ref & auto-scroll when form opens
   const formRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!showForm) return;
     const t = setTimeout(() => {
-      // On small screens center the form in viewport, otherwise align to start
       const block: ScrollLogicalPosition = (typeof window !== 'undefined' && window.innerWidth < 768) ? 'center' : 'start';
       formRef.current?.scrollIntoView({ behavior: 'smooth', block });
       const first = formRef.current?.querySelector('input, textarea, select, button') as HTMLElement | null;
@@ -187,7 +217,7 @@ export default function InventoryDashboard() {
                 Inventory Management
               </h1>
               <p className="text-gray-600">
-                Track stock, manage suppliers, and monitor inventory value
+                Track stock, manage products, and monitor inventory value
               </p>
             </div>
             <button
@@ -198,7 +228,7 @@ export default function InventoryDashboard() {
               className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white text-sm md:text-base font-medium rounded-lg hover:from-emerald-700 hover:to-emerald-800 transition-all shadow-lg hover:shadow-xl flex items-center gap-2 whitespace-nowrap"
             >
               <Plus className="h-5 w-5" />
-              Add Inventory Item
+              Add Product
             </button>
           </div>
         </motion.div>
@@ -215,7 +245,7 @@ export default function InventoryDashboard() {
               className="mb-6 overflow-hidden"
             >
               <InventoryForm
-                item={editingItem}
+                product={editingItem} // Changed from item to product
                 onSave={handleSaveItem}
                 onCancel={handleCancel}
               />
@@ -277,7 +307,7 @@ export default function InventoryDashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Categories</p>
                 <p className="text-3xl font-bold text-red-600 mt-2">
-                  {Array.from(new Set(inventory.map(item => item.category_details?.name).filter(Boolean))).length}
+                  {stats.categoriesCount}
                 </p>
               </div>
               <div className="h-12 w-12 bg-red-100 rounded-lg flex items-center justify-center">
@@ -291,7 +321,7 @@ export default function InventoryDashboard() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Items</p>
                 <p className="text-3xl font-bold text-blue-600 mt-2">
-                  {inventory.filter(item => item.is_active).length}
+                  {stats.activeItems}
                 </p>
               </div>
               <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -313,7 +343,7 @@ export default function InventoryDashboard() {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search inventory..."
+                  placeholder="Search products..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
@@ -358,8 +388,6 @@ export default function InventoryDashboard() {
           </div>
         </motion.div>
 
-        {/* Inventory Form moved above header to ensure it appears at the top on mobile */}
-
         {/* Inventory Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -371,9 +399,9 @@ export default function InventoryDashboard() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-emerald-900">
-                  Inventory Items ({filteredInventory.length})
+                  Products ({filteredInventory.length})
                 </h2>
-                <p className="text-sm text-gray-600 mt-1">Showing {filteredInventory.length} of {inventory.length} items</p>
+                <p className="text-sm text-gray-600 mt-1">Showing {filteredInventory.length} of {inventory.length} products</p>
               </div>
               <div className="flex gap-3">
                 <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2">
@@ -389,7 +417,7 @@ export default function InventoryDashboard() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Item Details
+                    Product Details
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Brand/Category
@@ -410,13 +438,15 @@ export default function InventoryDashboard() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredInventory.map((item) => {
-                  const isLowStock = item.quantity_in_stock < 10;
+                  const isLowStock = item.stock_qty < 10; // Changed from quantity_in_stock
                   
                   return (
                     <tr key={item.id} className="hover:bg-gray-50 group">
                       <td className="px-6 py-4">
                         <div>
-                          <div className="font-medium text-gray-900">{item.brand_name}</div>
+                          <div className="font-medium text-gray-900">
+                            {item.brand_name} - {item.product_name}
+                          </div>
                           <div className="text-sm text-gray-500 mt-1 truncate max-w-xs">
                             {item.description || 'No description'}
                           </div>
@@ -431,10 +461,10 @@ export default function InventoryDashboard() {
                               <span className="text-gray-700">{item.brand_name}</span>
                             </div>
                           )}
-                          {item.category_details?.name && (
+                          {item.category_name && ( // Changed from category_details?.name
                             <div className="flex items-center text-sm">
                               <Truck className="h-4 w-4 text-gray-400 mr-2" />
-                              <span className="text-gray-700">{item.category_details.name}</span>
+                              <span className="text-gray-700">{item.category_name}</span>
                             </div>
                           )}
                         </div>
@@ -447,7 +477,7 @@ export default function InventoryDashboard() {
                               ? 'bg-red-100 text-red-800' 
                               : 'bg-emerald-100 text-emerald-800'
                           }`}>
-                            {item.quantity_in_stock} units
+                            {item.stock_qty} units {/* Changed from quantity_in_stock */}
                           </div>
                           {isLowStock && (
                             <AlertTriangle className="h-4 w-4 text-red-500" />
@@ -461,10 +491,10 @@ export default function InventoryDashboard() {
                       <td className="px-6 py-4">
                         <div className="space-y-1 text-sm">
                           <div className="text-gray-600">
-                            Added: {new Date(item.created_at).toLocaleDateString()}
+                            Added: {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
                           </div>
                           <div className="text-gray-600">
-                            Updated: {new Date(item.updated_at).toLocaleDateString()}
+                            Updated: {item.updated_at ? new Date(item.updated_at).toLocaleDateString() : 'N/A'}
                           </div>
                         </div>
                       </td>
@@ -472,10 +502,10 @@ export default function InventoryDashboard() {
                       <td className="px-6 py-4">
                         <div className="text-sm">
                           <div className="font-semibold text-emerald-900">
-                            KES {item.selling_price.toLocaleString()}/unit
+                            KES {Number(item.selling_price).toLocaleString()}/unit
                           </div>
                           <div className="text-gray-500">
-                            Total: KES {(item.selling_price * item.quantity_in_stock).toLocaleString()}
+                            Total: KES {(Number(item.selling_price) * item.stock_qty).toLocaleString()} {/* Changed from quantity_in_stock */}
                           </div>
                         </div>
                       </td>
@@ -515,22 +545,21 @@ export default function InventoryDashboard() {
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   {searchTerm || filterBrand || filterStock !== 'all' 
-                    ? 'No inventory items match your filters' 
-                    : 'No inventory items yet'}
+                    ? 'No products match your filters' 
+                    : 'No products yet'}
                 </h3>
                 <p className="text-gray-500 max-w-sm mx-auto mb-6">
                   {searchTerm || filterBrand || filterStock !== 'all'
                     ? 'Try adjusting your filters' 
-                    : 'Add your first inventory item to get started'}
+                    : 'Add your first product to get started'}
                 </p>
                 {!showForm && !searchTerm && !filterBrand && filterStock === 'all' && (
                   <button
                     onClick={() => setShowForm(true)}
                     className="px-4 py-2 md:px-6 md:py-3 bg-emerald-600 text-white text-sm md:text-base font-medium rounded-lg hover:bg-emerald-700 inline-flex items-center gap-2"
                   >
-                    
                     <Plus className="h-5 w-5" />
-                    Add First Item
+                    Add First Product
                   </button>
                 )}
               </div>
@@ -539,7 +568,7 @@ export default function InventoryDashboard() {
         </motion.div>
       </div>
 
-      {/* Item Details Modal - FIXED */}
+      {/* Product Details Modal */}
       <AnimatePresence>
         {selectedItem && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -551,7 +580,7 @@ export default function InventoryDashboard() {
             >
               <div className="px-8 py-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">{selectedItem.brand_name}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedItem.product_name}</h2>
                   <button
                     onClick={handleCloseModal}
                     className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -559,12 +588,13 @@ export default function InventoryDashboard() {
                     ×
                   </button>
                 </div>
+                <p className="text-gray-600 mt-1">{selectedItem.brand_name}</p>
               </div>
 
               <div className="px-8 py-6 space-y-6">
-                {/* Item Details */}
+                {/* Product Details */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Item Details</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Details</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-gray-600">Description</p>
@@ -572,7 +602,7 @@ export default function InventoryDashboard() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Quantity in Stock</p>
-                      <p className="text-gray-900 font-semibold">{selectedItem.quantity_in_stock} units</p>
+                      <p className="text-gray-900 font-semibold">{selectedItem.stock_qty} units</p>
                     </div>
                   </div>
                 </div>
@@ -585,10 +615,10 @@ export default function InventoryDashboard() {
                       <p className="text-sm text-gray-600">Brand Name</p>
                       <p className="text-gray-900">{selectedItem.brand_name}</p>
                     </div>
-                    {selectedItem.category_details?.name && (
+                    {selectedItem.category_name && (
                       <div>
                         <p className="text-sm text-gray-600">Category</p>
-                        <p className="text-gray-900">{selectedItem.category_details.name}</p>
+                        <p className="text-gray-900">{selectedItem.category_name}</p>
                       </div>
                     )}
                   </div>
@@ -601,13 +631,13 @@ export default function InventoryDashboard() {
                     <div>
                       <p className="text-sm text-gray-600">Created On</p>
                       <p className="text-gray-900">
-                        {new Date(selectedItem.created_at).toLocaleDateString()}
+                        {selectedItem.created_at ? new Date(selectedItem.created_at).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Last Updated</p>
                       <p className="text-gray-900">
-                        {new Date(selectedItem.updated_at).toLocaleDateString()}
+                        {selectedItem.updated_at ? new Date(selectedItem.updated_at).toLocaleDateString() : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -620,19 +650,19 @@ export default function InventoryDashboard() {
                     <div>
                       <p className="text-sm text-gray-600">Selling Price per Unit</p>
                       <p className="text-gray-900 font-semibold">
-                        KES {selectedItem.selling_price.toLocaleString()}
+                        KES {Number(selectedItem.selling_price).toLocaleString()}
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600">Cost Price per Unit</p>
+                      <p className="text-sm text-gray-600">Category ID</p>
                       <p className="text-gray-900 font-semibold">
-                        KES {selectedItem.cost_price?.toLocaleString() || 'N/A'}
+                        {selectedItem.category || 'N/A'}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Total Stock Value</p>
                       <p className="text-gray-900 font-semibold text-emerald-700">
-                        KES {(selectedItem.selling_price * selectedItem.quantity_in_stock).toLocaleString()}
+                        KES {(Number(selectedItem.selling_price) * selectedItem.stock_qty).toLocaleString()}
                       </p>
                     </div>
                     <div>
@@ -654,7 +684,7 @@ export default function InventoryDashboard() {
                     }}
                     className="px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700"
                   >
-                    Edit Item
+                    Edit Product
                   </button>
                   <button
                     onClick={handleCloseModal}

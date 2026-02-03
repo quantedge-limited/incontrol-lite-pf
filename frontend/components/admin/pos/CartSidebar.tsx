@@ -2,7 +2,7 @@
 "use client";
 
 import { X, Trash2, Plus, Minus, ShoppingCart } from 'lucide-react';
-import { POSCartItem } from '@/types/pos';
+import { POSCartItem } from '@/types/pos'; // Or use '@/components/admin/pos/types' if you moved it
 import { toast } from "react-toastify";
 
 {/*
@@ -89,7 +89,7 @@ export default function CartSidebar({
               ) : (
                 <div className="space-y-4">
                   {cart.map((item) => {
-                    const itemStock = item.stock || 0;
+                    const itemStock = item.stock_qty; // Changed from item.stock to item.stock_qty
                     const isMaxQuantity = item.quantity >= itemStock;
                     
                     return (
@@ -99,9 +99,9 @@ export default function CartSidebar({
                       >
                         {/* Item Image */}
                         <div className="flex-shrink-0">
-                          {item.image_url ? (
+                          {item.image ? ( // Changed from item.image_url to item.image
                             <img
-                              src={item.image_url}
+                              src={item.image}
                               alt={item.name}
                               className="h-14 w-14 sm:h-16 sm:w-16 object-cover rounded shadow-sm"
                             />
@@ -126,6 +126,13 @@ export default function CartSidebar({
                             {formatCurrency(item.price)} each
                           </p>
                           
+                          {/* Stock Info */}
+                          {item.category_name && (
+                            <p className="text-xs text-gray-500">
+                              Category: {item.category_name}
+                            </p>
+                          )}
+                          
                           {/* Quantity Controls */}
                           <div className="flex items-center gap-3 mt-3">
                             <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden">
@@ -147,9 +154,13 @@ export default function CartSidebar({
                               </button>
                             </div>
                             
+                            <div className="text-xs text-gray-500 ml-auto mr-2">
+                              Stock: {itemStock}
+                            </div>
+                            
                             <button
                               onClick={() => onRemoveItem(item.id)}
-                              className="ml-auto p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -185,6 +196,10 @@ export default function CartSidebar({
                 <div className="space-y-3">
                   <button
                     className="w-full py-3.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100"
+                    onClick={() => {
+                      // This should trigger checkout from parent component
+                      onClose(); // Close sidebar first
+                    }}
                   >
                     Checkout
                   </button>

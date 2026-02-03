@@ -88,12 +88,23 @@ export const inventoryApi = {
   // ========== CATEGORIES ==========
   
   // List all categories (GET /api/inventory/categories/)
+  // Update getCategories function
   async getCategories(): Promise<Category[]> {
+    // Check auth first
+    checkAuth(); // This will throw if not authenticated
+    
+    const token = getAuthToken();
     const res = await fetch(`${API_BASE}/inventory/categories/`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Add auth header
+      },
     });
     
     if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Please login to access categories');
+      }
       throw new Error('Failed to fetch categories');
     }
     
@@ -102,19 +113,29 @@ export const inventoryApi = {
 
   // Get single category (GET /api/inventory/categories/{id}/)
   async getCategory(id: number): Promise<Category> {
+    checkAuth();
+    
+    const token = getAuthToken();
     const res = await fetch(`${API_BASE}/inventory/categories/${id}/`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Add auth header
+      },
     });
     
     if (!res.ok) {
       if (res.status === 404) {
         throw new Error('Category not found');
       }
+      if (res.status === 401) {
+        throw new Error('Please login to access category');
+      }
       throw new Error('Failed to fetch category');
     }
     
     return res.json();
   },
+
 
   // Create category (POST /api/inventory/categories/)
   async createCategory(categoryData: { name: string; slug?: string }): Promise<Category> {
@@ -194,6 +215,10 @@ export const inventoryApi = {
     search?: string;
     ordering?: string;
   }): Promise<Product[]> {
+    // Check auth first
+    checkAuth();
+    
+    const token = getAuthToken();
     const url = new URL(`${API_BASE}/inventory/products/`);
     
     // Add query parameters if provided
@@ -206,10 +231,16 @@ export const inventoryApi = {
     }
     
     const res = await fetch(url.toString(), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Add auth header
+      },
     });
     
     if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Please login to access products');
+      }
       throw new Error('Failed to fetch products');
     }
     
@@ -218,13 +249,22 @@ export const inventoryApi = {
 
   // Get single product (GET /api/inventory/products/{id}/)
   async getProduct(id: number): Promise<Product> {
+    checkAuth();
+    
+    const token = getAuthToken();
     const res = await fetch(`${API_BASE}/inventory/products/${id}/`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Add auth header
+      },
     });
     
     if (!res.ok) {
       if (res.status === 404) {
         throw new Error('Product not found');
+      }
+      if (res.status === 401) {
+        throw new Error('Please login to access product');
       }
       throw new Error('Failed to fetch product');
     }
@@ -387,6 +427,9 @@ export const inventoryApi = {
     });
     
     if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Please login to access stock valuation');
+      }
       throw new Error('Failed to fetch stock valuation');
     }
     
@@ -395,6 +438,9 @@ export const inventoryApi = {
 
   // Quick search products (GET /api/inventory/products/quick-search/)
   async quickSearch(brand?: string): Promise<QuickSearchProduct[]> {
+    checkAuth();
+    
+    const token = getAuthToken();
     const url = new URL(`${API_BASE}/inventory/products/quick-search/`);
     
     if (brand) {
@@ -402,10 +448,16 @@ export const inventoryApi = {
     }
     
     const res = await fetch(url.toString(), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`, // Add auth header
+      },
     });
     
     if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error('Please login to search products');
+      }
       throw new Error('Failed to search products');
     }
     

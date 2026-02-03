@@ -55,12 +55,37 @@ export default function InventoryDashboard() {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const data = await inventoryApi.getProducts(); // Changed from .list() to .getProducts()
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('Please login to access inventory');
+      }
+      
+      const data = await inventoryApi.getProducts();
       setInventory(data);
       setFilteredInventory(data);
+      
     } catch (error) {
       console.error('Failed to load inventory:', error);
-      toast.error('Failed to load inventory');
+      
+      // Show appropriate error message
+      if (error instanceof Error) {
+        if (error.message.includes('login') || error.message.includes('authenticated')) {
+          toast.error('Please login to access inventory');
+          // Optional: Redirect to login page
+          // window.location.href = '/login';
+        } else if (error.message.includes('Failed to fetch')) {
+          toast.error('Cannot connect to server. Please check your connection.');
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        toast.error('Failed to load inventory');
+      }
+      
+      setInventory([]);
+      setFilteredInventory([]);
     } finally {
       setLoading(false);
     }

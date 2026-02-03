@@ -45,7 +45,7 @@ export default function InventoryForm({
 
   // Form data matches Django Product model fields
   const [formData, setFormData] = useState<ProductFormData>({
-    category: product?.category || 0, // Default to 0 instead of empty string
+    category: product?.category || "", // Default to 0 instead of empty string
     brand_name: product?.brand_name || "",
     product_name: product?.product_name || "",
     description: product?.description || "",

@@ -3,14 +3,10 @@
 
 import { motion } from 'framer-motion';
 import { X, CreditCard, Smartphone, Wallet, User, Phone, Mail, MapPin } from 'lucide-react';
-import { useState } from 'react';
-import { POSCartItem, CustomerData } from '@/types/pos'; // Or from '@/components/admin/pos/types'
-
-{/*
-  
-  This component renders a checkout modal for the POS system. It collects customer information and payment method,
-  and allows the user to complete the checkout process.
-  */}
+import { useState, useEffect } from 'react';
+import { POSCartItem, CustomerData } from '@/types/pos';
+import { salesApi } from '@/lib/api/salesApi';
+import { clientsApi } from '@/lib/api/clientsApi'; // You'll need this
 
 interface CheckoutModalProps {
   onClose: () => void;
@@ -20,6 +16,8 @@ interface CheckoutModalProps {
   subtotal: number;
   tax: number;
   total: number;
+  servedBy: string; // Added: Cashier/Staff name
+  onClientSelect?: (clientId: number) => void; // Optional: For client search
 }
 
 export default function CheckoutModal({
@@ -30,22 +28,60 @@ export default function CheckoutModal({
   subtotal,
   tax,
   total,
+  servedBy,
+  onClientSelect,
 }: CheckoutModalProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'mobile_money'>('cash');
+  const [existingClientId, setExistingClientId] = useState<number | undefined>();
+  const [clients, setClients] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Fetch clients for search (optional)
+  useEffect(() => {
+    if (searchTerm.length > 2) {
+      searchClients();
+    }
+  }, [searchTerm]);
+
+  const searchClients = async () => {
+    setIsSearching(true);
+    try {
+      // You'll need to implement clientsApi or adjust this
+      // const data = await clientsApi.searchClients(searchTerm);
+      // setClients(data);
+    } catch (error) {
+      console.error('Error searching clients:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleClientSelect = (client: any) => {
+    setExistingClientId(client.id);
+    setCustomerName(client.full_name || client.name);
+    setCustomerPhone(client.phone || '');
+    setCustomerEmail(client.email || '');
+    setCustomerAddress(client.address || '');
+    onClientSelect?.(client.id);
+    setSearchTerm('');
+    setClients([]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const customerData: CustomerData = {
+      client_id: existingClientId,
       name: customerName,
       phone: customerPhone,
       email: customerEmail || undefined,
-      paymentMethod: paymentMethod || undefined, // Make optional
       address: customerAddress || undefined,
+      payment_method: paymentMethod,
     };
     
     await onCheckout(customerData);
@@ -60,14 +96,33 @@ export default function CheckoutModal({
   };
 
   const paymentMethods = [
-    { id: 'cash', name: 'Cash', icon: Wallet },
-    { id: 'mpesa', name: 'M-Pesa', icon: Smartphone },
-    { id: 'card', name: 'Credit Card', icon: CreditCard },
+    { id: 'cash' as const, name: 'Cash', icon: Wallet },
+    { id: 'card' as const, name: 'Credit Card', icon: CreditCard },
+    { id: 'mobile_money' as const, name: 'Mobile Money', icon: Smartphone },
   ];
 
-  // Calculate item totals for display
   const calculateItemTotal = (item: POSCartItem) => {
     return item.price * item.quantity;
+  };
+
+  const handleQuickCustomer = (type: 'walkin' | 'regular' | 'corporate') => {
+    switch (type) {
+      case 'walkin':
+        setCustomerName('Walk-in Customer');
+        setCustomerAddress('In-store pickup');
+        setExistingClientId(undefined);
+        break;
+      case 'regular':
+        setCustomerName('Regular Customer');
+        setCustomerPhone('0712345678');
+        setCustomerAddress('123 Main Street, Nairobi');
+        break;
+      case 'corporate':
+        setCustomerName('Corporate Client');
+        setCustomerEmail('corporate@example.com');
+        setCustomerAddress('Corporate Office, Westlands');
+        break;
+    }
   };
 
   return (
@@ -82,7 +137,10 @@ export default function CheckoutModal({
           {/* Left Side - Order Summary */}
           <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">POS Checkout</h2>
+                <p className="text-sm text-gray-600">Served by: {servedBy}</p>
+              </div>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-lg"
@@ -93,18 +151,18 @@ export default function CheckoutModal({
             </div>
 
             {/* Order Items */}
-            <div className="mb-8">
+            <div className="mb-6">
               <h3 className="font-semibold text-gray-700 mb-4">Order Summary</h3>
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-60 overflow-y-auto">
                 {cart.map((item) => (
                   <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium">{item.name}</p>
                       <p className="text-sm text-gray-600">
                         {item.quantity} × {formatCurrency(item.price)}
                       </p>
                     </div>
-                    <p className="font-bold">
+                    <p className="font-bold ml-4">
                       {formatCurrency(calculateItemTotal(item))}
                     </p>
                   </div>
@@ -113,7 +171,7 @@ export default function CheckoutModal({
             </div>
 
             {/* Totals */}
-            <div className="space-y-2 mb-8">
+            <div className="space-y-2 mb-6 p-4 bg-gray-50 rounded-lg">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span>{formatCurrency(subtotal)}</span>
@@ -122,20 +180,59 @@ export default function CheckoutModal({
                 <span>Tax (16% VAT)</span>
                 <span>{formatCurrency(tax)}</span>
               </div>
-              <div className="flex justify-between text-xl font-bold text-gray-900 pt-3 border-t">
-                <span>Total</span>
+              <div className="flex justify-between text-xl font-bold text-gray-900 pt-3 border-t border-gray-300">
+                <span>Total Amount</span>
                 <span>{formatCurrency(total)}</span>
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-3 gap-3 mb-8">
+            {/* Client Search (Optional) */}
+            {onClientSelect && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search Existing Client
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search by name or phone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    disabled={loading}
+                  />
+                  {isSearching && (
+                    <div className="absolute right-3 top-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
+                    </div>
+                  )}
+                </div>
+                {clients.length > 0 && (
+                  <div className="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                    {clients.map((client) => (
+                      <button
+                        key={client.id}
+                        onClick={() => handleClientSelect(client)}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                      >
+                        {client.full_name} - {client.phone}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {existingClientId && (
+                  <div className="mt-2 text-sm text-emerald-600">
+                    ✓ Using existing client profile
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Quick Customer Buttons */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
               <button
                 type="button"
-                onClick={() => {
-                  setCustomerName('Walk-in Customer');
-                  setCustomerAddress('In-store pickup');
-                }}
+                onClick={() => handleQuickCustomer('walkin')}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                 disabled={loading}
               >
@@ -143,11 +240,7 @@ export default function CheckoutModal({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setCustomerPhone('0712345678');
-                  setCustomerName('Regular Customer');
-                  setCustomerAddress('123 Main Street, Nairobi');
-                }}
+                onClick={() => handleQuickCustomer('regular')}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                 disabled={loading}
               >
@@ -155,11 +248,7 @@ export default function CheckoutModal({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setCustomerEmail('corporate@example.com');
-                  setCustomerName('Corporate');
-                  setCustomerAddress('Corporate Office, Westlands');
-                }}
+                onClick={() => handleQuickCustomer('corporate')}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                 disabled={loading}
               >
@@ -192,11 +281,10 @@ export default function CheckoutModal({
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
                       type="tel"
-                      placeholder="Phone Number *"
+                      placeholder="Phone Number"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      required
                       disabled={loading}
                     />
                   </div>
@@ -253,22 +341,6 @@ export default function CheckoutModal({
                 </div>
               </div>
 
-              {/* Complete Order Button */}
-              <button
-                type="submit"
-                disabled={loading || cart.length === 0}
-                className="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                    Processing...
-                  </>
-                ) : (
-                  'Complete Sale'
-                )}
-              </button>
-
               {/* Receipt Options */}
               <div className="pt-4 border-t border-gray-200">
                 <div className="flex items-center gap-2 mb-2">
@@ -280,7 +352,7 @@ export default function CheckoutModal({
                     disabled={loading}
                   />
                   <label htmlFor="printReceipt" className="text-sm text-gray-700">
-                    Print receipt
+                    Print receipt automatically
                   </label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -291,9 +363,31 @@ export default function CheckoutModal({
                     disabled={loading}
                   />
                   <label htmlFor="sendReceipt" className="text-sm text-gray-700">
-                    Send receipt via SMS/Email
+                    Send digital receipt (if email provided)
                   </label>
                 </div>
+              </div>
+
+              {/* Complete Order Button */}
+              <button
+                type="submit"
+                disabled={loading || cart.length === 0}
+                className="w-full py-4 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                    Processing Sale...
+                  </>
+                ) : (
+                  `Complete ${paymentMethod === 'cash' ? 'Cash' : 'Card'} Sale`
+                )}
+              </button>
+
+              {/* Additional Info */}
+              <div className="text-center text-sm text-gray-500">
+                <p>This sale will immediately deduct stock from inventory.</p>
+                <p>Receipt will be generated upon completion.</p>
               </div>
             </form>
           </div>

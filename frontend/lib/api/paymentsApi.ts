@@ -1,40 +1,29 @@
-// lib/api/paymentsApi.ts
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
+// lib/api/paymentsApi.ts - Updated for Stripe integration
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
 export interface Payment {
-  id: string;
-  order: string; // This is the order ID (UUID)
-  phone_number: string;
+  id: number;
+  sale: number; // Sale ID
+  stripe_payment_intent_id: string;
   amount: number;
-  status: string;
-  mpesa_receipt_number?: string;
+  currency: string;
+  status: 'pending' | 'succeeded' | 'failed';
   created_at: string;
 }
 
-export interface InitiatePaymentRequest {
-  order_id: string; // UUID string
-  phone_number: string;
+export interface CreatePaymentIntentRequest {
+  sale_id: number;
 }
 
-export interface InitiatePaymentResponse {
-  success: boolean;
-  message: string;
-  checkout_request_id?: string;
-  merchant_request_id?: string;
-  payment?: Payment;
-}
-
-export interface PaymentStatusResponse {
-  success: boolean;
-  message: string;
-  payment: Payment;
+export interface CreatePaymentIntentResponse {
+  clientSecret: string;
+  message?: string;
 }
 
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // Get auth token if available
   const token = localStorage.getItem('access_token');
   
   const headers: Record<string, string> = { 
@@ -63,31 +52,20 @@ async function apiRequest<T>(
     throw new Error(error.detail || error.message || 'Payment request failed');
   }
 
-  // Handle empty responses (like for DELETE)
-  if (response.status === 204) {
-    return {} as T;
-  }
-
   return response.json();
 }
 
 export const paymentsApi = {
-  // Initiate M-Pesa payment
-  initiatePayment: (paymentData: InitiatePaymentRequest): Promise<InitiatePaymentResponse> =>
-    apiRequest<InitiatePaymentResponse>('/payments/initiate/', {
+  // Create Stripe payment intent
+  createPaymentIntent: (paymentData: CreatePaymentIntentRequest): Promise<CreatePaymentIntentResponse> =>
+    apiRequest<CreatePaymentIntentResponse>('/payments/create-intent/', {
       method: 'POST',
       body: JSON.stringify(paymentData),
     }),
 
-  // Check payment status by order ID
-  checkPaymentStatus: (orderId: string): Promise<PaymentStatusResponse> =>
-    apiRequest<PaymentStatusResponse>(`/payments/status/${orderId}/`, {
-      method: 'GET',
-    }),
-
-  // Get payment by ID
-  getPayment: (paymentId: string): Promise<Payment> =>
-    apiRequest<Payment>(`/payments/${paymentId}/`, {
+  // Get payment by sale ID
+  getPaymentBySale: (saleId: number): Promise<Payment> =>
+    apiRequest<Payment>(`/payments/sale/${saleId}/`, {
       method: 'GET',
     }),
 
@@ -96,17 +74,69 @@ export const paymentsApi = {
     apiRequest<Payment[]>('/payments/', {
       method: 'GET',
     }),
-
-  // Note: The M-Pesa callback endpoint is for backend use only
-  // Frontend doesn't call this directly
 };
 
-// Helper function to poll payment status (for real-time updates)
+// Stripe integration helper
+export const stripeApi = {
+  // Initialize Stripe
+  initializeStripe: async () => {
+    if (typeof window !== 'undefined' && !(window as any).Stripe) {
+      const { loadStripe } = await import('@stripe/stripe-js');
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+      return stripe;
+    }
+    return (window as any).Stripe;
+  },
+
+  // Process payment with Stripe Elements
+  processPayment: async (
+    stripe: any,
+    elements: any,
+    clientSecret: string,
+    redirectUrl?: string
+  ): Promise<{ error?: string; paymentIntent?: any }> => {
+    try {
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        return { error: submitError.message };
+      }
+
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        clientSecret,
+        confirmParams: {
+          return_url: redirectUrl || `${window.location.origin}/payment/success`,
+        },
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { paymentIntent };
+    } catch (error: any) {
+      return { error: error.message || 'Payment processing failed' };
+    }
+  },
+
+  // Check payment status
+  checkPaymentStatus: async (stripe: any, paymentIntentId: string) => {
+    try {
+      const { paymentIntent } = await stripe.retrievePaymentIntent(paymentIntentId);
+      return paymentIntent;
+    } catch (error) {
+      console.error('Error retrieving payment intent:', error);
+      return null;
+    }
+  },
+};
+
+// Payment status polling
 export async function pollPaymentStatus(
-  orderId: string,
-  interval = 5000,
-  maxAttempts = 12
-): Promise<PaymentStatusResponse> {
+  saleId: number,
+  interval = 3000,
+  maxAttempts = 20
+): Promise<Payment> {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     
@@ -114,19 +144,18 @@ export async function pollPaymentStatus(
       attempts++;
       
       try {
-        const response = await paymentsApi.checkPaymentStatus(orderId);
+        const payment = await paymentsApi.getPaymentBySale(saleId);
         
-        // If payment is completed or failed, resolve
-        if (response.payment.status === 'completed' || 
-            response.payment.status === 'failed' ||
+        // If payment is succeeded or failed, resolve
+        if (payment.status === 'succeeded' || 
+            payment.status === 'failed' ||
             attempts >= maxAttempts) {
-          resolve(response);
+          resolve(payment);
         } else {
           // Continue polling
           setTimeout(poll, interval);
         }
       } catch (error) {
-        // If we've reached max attempts or got an error, reject
         if (attempts >= maxAttempts) {
           reject(new Error('Payment status polling timeout'));
         } else {

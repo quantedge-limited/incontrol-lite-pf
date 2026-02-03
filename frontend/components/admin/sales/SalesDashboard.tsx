@@ -1,4 +1,4 @@
-// components/admin/sales/SalesDashboard.tsx - ONLY FIX INVENTORY API CALLS
+// components/admin/sales/SalesDashboard.tsx - FIXED FOR DJANGO BACKEND
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,35 +19,11 @@ import SalesChart from "./SalesChart";
 import SalesFilters from "./SalesFilters";
 import SalesTable from "./SalesTable";
 import { salesApi } from "@/lib/api/salesApi";
-import { inventoryApi } from "@/lib/api/inventoryApi"; // Use the corrected API
+import { inventoryApi } from "@/lib/api/inventoryApi";
 import { toast } from "react-toastify";
-import type { Order } from "@/lib/api/salesApi";
+import type { Sale, SalesStats } from "@/lib/api/salesApi";
 
-{/*
-  
-  This component renders the main sales dashboard for the admin panel.
-  It displays key sales metrics, a chart of monthly sales trends, and a table of recent orders.
-  */}
-
-// Define stats interface locally since we removed it from the API
-interface SalesStats {
-  total_revenue: number;
-  recent_revenue: number;
-  total_sales: number;
-  avg_order_value: number;
-  monthly_trend: number[];
-  total_profit: number;
-  recent_profit: number;
-  top_products: Array<{
-    name: string;
-    total_quantity: number;
-    total_revenue: number;
-  }>;
-  low_stock_items: number;
-  out_of_stock_items: number;
-  recent_sales: number;
-}
-
+// Local interface for month data
 interface MonthData {
   label: string;
   year: number;
@@ -61,12 +37,13 @@ function monthLabel(d: Date): string {
 
 export default function SalesDashboard() {
   const router = useRouter();
-  const [sales, setSales] = useState<Order[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [stats, setStats] = useState<SalesStats | null>(null);
   const [month, setMonth] = useState<string | null>(null);
   const [showWalkInTable, setShowWalkInTable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [posSales, setPosSales] = useState<any[]>([]);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -81,17 +58,21 @@ export default function SalesDashboard() {
           return;
         }
 
-        // Fetch orders (sales) and inventory in parallel
-        const [ordersData, inventoryData] = await Promise.all([
-          salesApi.getOrders().catch(() => []),
-          inventoryApi.getProducts().catch(() => []), // FIXED: Changed from .list() to .getProducts()
+        // Fetch sales, POS sales, and inventory in parallel
+        const [salesData, posSalesData, inventoryData] = await Promise.all([
+          salesApi.getSales().catch(() => ({ results: [], count: 0 })),
+          salesApi.getPOSSales().catch(() => []),
+          inventoryApi.getProducts().catch(() => []),
         ]);
 
-        setSales(ordersData);
+        // Extract sales from the response
+        const onlineSales = Array.isArray(salesData) ? salesData : salesData.results || [];
+        setSales(onlineSales);
+        setPosSales(posSalesData);
         setInventoryItems(inventoryData);
         
-        // Calculate stats from orders since we don't have stats endpoint
-        const calculatedStats = calculateStatsFromOrders(ordersData);
+        // Calculate stats from combined sales data
+        const calculatedStats = calculateStatsFromSales(onlineSales, posSalesData);
         setStats(calculatedStats);
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -104,50 +85,53 @@ export default function SalesDashboard() {
     fetchData();
   }, [router]);
 
-  // Helper function to calculate stats from orders
-  const calculateStatsFromOrders = (orders: Order[]): SalesStats => {
-    const totalRevenue = orders.reduce((sum, order) => sum + order.subtotal, 0);
-    const totalSales = orders.length;
+  // Helper function to calculate stats from sales data
+  const calculateStatsFromSales = (onlineSales: Sale[], posSales: any[]): SalesStats => {
+    const allSales = [...onlineSales, ...posSales];
+    
+    const totalRevenue = allSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+    const totalSales = allSales.length;
     const avgOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
     
     // Calculate monthly trend (last 12 months)
     const monthlyTrend = Array(12).fill(0);
     const now = new Date();
     
-    orders.forEach(order => {
-      const orderDate = new Date(order.created_at);
-      const monthsAgo = (now.getFullYear() - orderDate.getFullYear()) * 12 + 
-                       (now.getMonth() - orderDate.getMonth());
+    allSales.forEach(sale => {
+      const saleDate = new Date(sale.sale_date || sale.timestamp || sale.created_at);
+      const monthsAgo = (now.getFullYear() - saleDate.getFullYear()) * 12 + 
+                       (now.getMonth() - saleDate.getMonth());
       
       if (monthsAgo >= 0 && monthsAgo < 12) {
-        monthlyTrend[11 - monthsAgo] += order.subtotal;
+        monthlyTrend[11 - monthsAgo] += (sale.total_amount || 0);
       }
     });
 
+    // Calculate recent sales (last 30 days)
+    const recentSales = allSales.filter(sale => {
+      const saleDate = new Date(sale.sale_date || sale.timestamp || sale.created_at);
+      const monthAgo = new Date();
+      monthAgo.setDate(monthAgo.getDate() - 30);
+      return saleDate > monthAgo;
+    });
+
+    // Calculate low stock items from inventory
+    const lowStockItems = inventoryItems.filter(item => 
+      item.stock_qty > 0 && item.stock_qty <= item.low_stock_threshold
+    ).length;
+
+    const outOfStockItems = inventoryItems.filter(item => 
+      item.stock_qty === 0
+    ).length;
+
     return {
       total_revenue: totalRevenue,
-      recent_revenue: orders
-        .filter(order => {
-          const orderDate = new Date(order.created_at);
-          const monthAgo = new Date();
-          monthAgo.setMonth(monthAgo.getMonth() - 1);
-          return orderDate > monthAgo;
-        })
-        .reduce((sum, order) => sum + order.subtotal, 0),
       total_sales: totalSales,
+      recent_sales: recentSales.length,
       avg_order_value: avgOrderValue,
-      monthly_trend: monthlyTrend,
-      total_profit: totalRevenue * 0.3, // Assuming 30% profit margin
-      recent_profit: 0,
       top_products: [],
-      low_stock_items: 0,
-      out_of_stock_items: 0,
-      recent_sales: orders.filter(order => {
-        const orderDate = new Date(order.created_at);
-        const monthAgo = new Date();
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        return orderDate > monthAgo;
-      }).length,
+      low_stock_items: lowStockItems,
+      out_of_stock_items: outOfStockItems,
     };
   };
 
@@ -165,44 +149,44 @@ export default function SalesDashboard() {
       });
     }
 
-    // Use stats data if available
-    if (stats?.monthly_trend) {
-      return {
-        months: months.map(m => m.label),
-        onlineTotals: stats.monthly_trend,
-        walkInTotals: stats.monthly_trend.map(v => v * 0.6), // Adjust based on your data
-        rawMonths: months,
-      };
-    }
-
-    // Fallback to calculating from sales data
+    // Calculate online sales totals
     const onlineTotals = months.map((m) =>
       sales
         .filter((s) => {
-          const d = new Date(s.created_at);
+          const d = new Date(s.sale_date);
           return (
             d.getFullYear() === m.year &&
             d.getMonth() === m.monthIndex
           );
         })
-        .reduce((a, b) => a + b.subtotal, 0)
+        .reduce((a, b) => a + b.total_amount, 0)
     );
-    
-    // Since your Order model doesn't have sale_type, we'll show all as online
-    const walkInTotals = months.map(() => 0); // Empty for walk-in if not tracked
-    
+
+    // Calculate POS sales totals
+    const posTotals = months.map((m) =>
+      posSales
+        .filter((s) => {
+          const d = new Date(s.timestamp);
+          return (
+            d.getFullYear() === m.year &&
+            d.getMonth() === m.monthIndex
+          );
+        })
+        .reduce((a, b) => a + b.total_amount, 0)
+    );
+
     return {
-      months: months.map((m) => m.label),
+      months: months.map(m => m.label),
       onlineTotals,
-      walkInTotals,
+      posTotals,
       rawMonths: months,
     };
-  }, [sales, stats]);
+  }, [sales, posSales]);
 
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
       if (month) {
-        const d = new Date(s.created_at);
+        const d = new Date(s.sale_date);
         const [y, m] = month.split("-").map(Number);
         if (d.getFullYear() !== y || d.getMonth() + 1 !== m) return false;
       }
@@ -210,34 +194,59 @@ export default function SalesDashboard() {
     });
   }, [sales, month]);
 
-  const walkInSales = filteredSales.slice(0, 10); // Show first 10 sales
+  const combinedSales = [...filteredSales, ...posSales.slice(0, 5)];
+  const displaySales = combinedSales.slice(0, 10); // Show first 10 sales
   
-  const totalRevenue = stats?.total_revenue || filteredSales.reduce((a, b) => a + b.subtotal, 0);
+  const totalRevenue = stats?.total_revenue || 
+    [...sales, ...posSales].reduce((a, b) => a + (b.total_amount || 0), 0);
 
   async function addSale(saleData: any) {
     try {
       setLoading(true);
       
-      // Prepare items for the sale
-      const items = saleData.items?.map((item: any) => ({
-        inventory_id: item.inventory,
-        quantity: item.quantity,
-      })) || [];
+      // Since we have both online and POS sales, determine which one to create
+      if (saleData.payment_method) {
+        // This is a POS sale
+        const posSaleData = {
+          client: saleData.client_id || null,
+          payment_method: saleData.payment_method || 'cash',
+          served_by: 'Admin', // Get from auth context
+          items: saleData.items?.map((item: any) => ({
+            product: item.product,
+            quantity: item.quantity,
+            unit_price: item.price_at_sale || item.price,
+          })) || [],
+        };
 
-      const orderToCreate = {
-        customer_name: saleData.customerName || saleData.buyer_name,
-        customer_phone: saleData.phone || saleData.buyer_phone,
-        customer_email: saleData.email || saleData.buyer_email,
-        items,
-      };
+        await salesApi.createPOSSale(posSaleData);
+      } else {
+        // This is an online sale
+        const onlineSaleData = {
+          client: saleData.client_id || 1, // Default client
+          shipping_address: saleData.address || 'N/A',
+          items: saleData.items?.map((item: any) => ({
+            product: item.product,
+            quantity: item.quantity,
+            price_at_sale: item.price,
+          })) || [],
+        };
 
-      const createdOrder = await salesApi.createOrder(orderToCreate);
+        await salesApi.createSale(onlineSaleData);
+      }
       
       // Refresh data
-      const ordersData = await salesApi.getOrders();
-      const calculatedStats = calculateStatsFromOrders(ordersData);
+      const [salesData, posSalesData, inventoryData] = await Promise.all([
+        salesApi.getSales(),
+        salesApi.getPOSSales(),
+        inventoryApi.getProducts(),
+      ]);
 
-      setSales(ordersData);
+      const onlineSales = Array.isArray(salesData) ? salesData : salesData.results || [];
+      setSales(onlineSales);
+      setPosSales(posSalesData);
+      setInventoryItems(inventoryData);
+      
+      const calculatedStats = calculateStatsFromSales(onlineSales, posSalesData);
       setStats(calculatedStats);
       setMonth(null);
       
@@ -253,30 +262,35 @@ export default function SalesDashboard() {
   const exportToCSV = () => {
     const headers = [
       "Date",
-      "Order #",
+      "Sale Type",
+      "Sale ID",
       "Customer",
-      "Phone",
-      "Items",
-      "Total (KES)",
+      "Amount (KES)",
       "Status",
+      "Payment Method",
     ];
-    const rows = filteredSales.map((s) => {
-      const d = new Date(s.created_at);
+    
+    const allSales = [...sales, ...posSales];
+    const rows = allSales.map((s) => {
+      const date = s.sale_date || s.timestamp || s.created_at;
+      const d = new Date(date);
       const dateStr = d.toLocaleString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       });
+      
       return [
         dateStr,
-        s.reference || s.id.substring(0, 8),
-        s.customer_name || "Guest",
-        s.customer_phone || "N/A",
-        s.items.length,
-        s.subtotal.toFixed(2),
-        s.status,
+        s.timestamp ? 'POS' : 'Online',
+        s.id || s.transaction_id || s.id,
+        s.client_name || s.client?.full_name || 'Guest',
+        (s.total_amount || 0).toFixed(2),
+        s.status || 'completed',
+        s.payment_method || 'N/A',
       ];
     });
+    
     const csvContent = [headers, ...rows].map((e) => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -288,7 +302,7 @@ export default function SalesDashboard() {
     document.body.removeChild(link);
   };
 
-  if (loading && sales.length === 0) {
+  if (loading && sales.length === 0 && posSales.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#f0fdf4" }}>
         <div className="text-center">
@@ -346,6 +360,9 @@ export default function SalesDashboard() {
                 <p className="text-xl sm:text-2xl font-bold text-emerald-700 mt-1">
                   KES {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {sales.length} Online + {posSales.length} POS
+                </p>
               </div>
               <div className="h-10 w-10 sm:h-12 sm:w-12 bg-emerald-100 rounded-lg flex items-center justify-center">
                 <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-emerald-600" />
@@ -365,7 +382,10 @@ export default function SalesDashboard() {
                   Total Orders
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-blue-700 mt-1">
-                  {stats?.total_sales || sales.length}
+                  {stats?.total_sales || sales.length + posSales.length}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Last 30 days: {stats?.recent_sales || 0}
                 </p>
               </div>
               <div className="h-10 w-10 sm:h-12 sm:w-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -388,6 +408,9 @@ export default function SalesDashboard() {
                 <p className="text-xl sm:text-2xl font-bold text-purple-700 mt-1">
                   KES {stats?.avg_order_value?.toFixed(2) || "0.00"}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Across all sales
+                </p>
               </div>
               <div className="h-10 w-10 sm:h-12 sm:w-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
@@ -404,10 +427,13 @@ export default function SalesDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs sm:text-sm font-medium text-gray-500 uppercase">
-                  Recent Orders
+                  Inventory Status
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-amber-700 mt-1">
-                  {stats?.recent_sales || 0}
+                  {stats?.low_stock_items || 0} Low
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {stats?.out_of_stock_items || 0} Out of stock
                 </p>
               </div>
               <div className="h-10 w-10 sm:h-12 sm:w-12 bg-amber-100 rounded-lg flex items-center justify-center">
@@ -423,7 +449,7 @@ export default function SalesDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
                 <h3 className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-4">
-                  Monthly Revenue
+                  Online Sales
                 </h3>
                 <div className="h-56 sm:h-64">
                   <SalesChart
@@ -434,12 +460,12 @@ export default function SalesDashboard() {
               </div>
               <div className="bg-white rounded-2xl p-6 shadow-md border border-gray-100">
                 <h3 className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-4">
-                  Orders Trend
+                  POS Sales
                 </h3>
                 <div className="h-56 sm:h-64">
                   <SalesChart
                     months={chartData.months}
-                    totals={chartData.walkInTotals}
+                    totals={chartData.posTotals}
                   />
                 </div>
               </div>
@@ -449,10 +475,10 @@ export default function SalesDashboard() {
               <div className="px-6 py-5 flex justify-between items-center">
                 <div>
                   <h2 className="text-base sm:text-lg font-bold text-gray-900">
-                    Recent Orders
+                    Recent Transactions
                   </h2>
                   <p className="text-[10px] sm:text-xs text-gray-500 uppercase font-semibold">
-                    Latest 10 Transactions
+                    Latest 10 Sales (Online + POS)
                   </p>
                 </div>
                 <button
@@ -469,7 +495,7 @@ export default function SalesDashboard() {
               <div
                 className={`${showWalkInTable ? "block" : "hidden"} lg:block overflow-x-auto`}
               >
-                <SalesTable sales={walkInSales} />
+                <SalesTable sales={displaySales} />
               </div>
             </div>
           </div>

@@ -1,56 +1,84 @@
-// lib/api/salesApi.ts - UPDATED to match Django backend
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
+// lib/api/salesApi.ts - Updated to match Django backend structure
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
-// Update interfaces to match Django models
-export interface OrderItem {
-  id?: string;
+// Interfaces matching Django models
+export interface SaleItem {
+  id?: number;
+  product: number; // Product ID
   product_name: string;
-  unit_price: number;
+  brand_name: string;
   quantity: number;
-  total_price: number;
-  inventory_item?: {
-    id: string;
-    name: string;
-  };
+  price_at_sale: number;
+  line_total: number;
 }
 
-export interface Order {
-  id: string;
-  reference: string;
-  status: 'pending' | 'paid' | 'cancelled';
-  customer_name: string;
-  customer_phone: string;
-  customer_email?: string;
-  subtotal: number;
-  items: OrderItem[];
-  created_at: string;
+export interface Sale {
+  id: number;
+  client: number; // Client ID
+  client_name: string;
+  sale_date: string;
+  total_amount: number;
+  status: 'pending' | 'completed' | 'cancelled';
+  transaction_id?: string;
+  shipping_address: string;
+  items: SaleItem[];
 }
 
-export interface CreateOrderDto {
-  customer_name: string;
-  customer_phone: string;
-  customer_email?: string;
+export interface CreateSaleDto {
+  client: number; // Client ID
+  shipping_address: string;
   items: Array<{
-    inventory_id: string;  // Changed from "inventory" to "inventory_id" to match Django
+    product: number; // Product ID
     quantity: number;
+    price_at_sale: number;
   }>;
 }
 
-// For frontend cart (if you're maintaining a local cart)
-export interface CartItem {
-  inventory_id: string;
-  inventory_name: string;
+export interface POSItem {
+  product: number; // Product ID
+  product_name: string;
   quantity: number;
-  price_per_unit: number;
-  total_price: number;
+  unit_price: number;
+  line_total: number;
 }
 
-// Stats interface (if you have stats endpoint)
+export interface POSSale {
+  id: number;
+  client?: number; // Client ID (optional for POS)
+  timestamp: string;
+  total_amount: number;
+  payment_method: 'cash' | 'card' | 'mobile_money';
+  served_by: string;
+  items: POSItem[];
+}
+
+export interface CreatePOSSaleDto {
+  client?: number; // Optional client ID
+  payment_method: 'cash' | 'card' | 'mobile_money';
+  served_by: string;
+  items: Array<{
+    product: number; // Product ID
+    quantity: number;
+    unit_price: number;
+  }>;
+}
+
+// For frontend cart
+export interface CartItem {
+  product_id: number;
+  product_name: string;
+  brand_name: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+}
+
+// Stats interface
 export interface SalesStats {
   total_revenue: number;
-  total_orders: number;
-  recent_orders: number;
-  avg_order_value: number;
+  total_sales: number;
+  recent_sales: number;
+  avg_sale_value: number;
   top_products: Array<{
     name: string;
     total_quantity: number;
@@ -65,7 +93,6 @@ async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  // Get auth token if available
   const token = localStorage.getItem('access_token');
   
   const headers: Record<string, string> = { 
@@ -94,7 +121,6 @@ async function apiRequest<T>(
     throw new Error(error.detail || error.message || 'Request failed');
   }
 
-  // Handle empty responses (like for DELETE)
   if (response.status === 204) {
     return {} as T;
   }
@@ -103,65 +129,97 @@ async function apiRequest<T>(
 }
 
 // -------------------
-// SALES/ORDERS API
+// ONLINE SALES API
 // -------------------
 export const salesApi = {
-  // Create a new order (checkout)
-  createOrder: (orderData: CreateOrderDto): Promise<Order> =>
-    apiRequest<Order>('/sales/checkout/', {
+  // Create a new sale (online)
+  createSale: (saleData: CreateSaleDto): Promise<Sale> =>
+    apiRequest<Sale>('/sales/', {
       method: 'POST',
-      body: JSON.stringify(orderData),
+      body: JSON.stringify(saleData),
     }),
 
-  // Get all orders
-  getOrders: (): Promise<Order[]> =>
-    apiRequest<Order[]>('/sales/orders/'),
+  // Get all sales
+  getSales: (params?: {
+    status?: string;
+    client?: number;
+    search?: string;
+    ordering?: string;
+  }): Promise<{ results: Sale[]; count: number }> => {
+    const queryParams = new URLSearchParams();
+    if (params?.status) queryParams.append('status', params.status);
+    if (params?.client) queryParams.append('client', params.client.toString());
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.ordering) queryParams.append('ordering', params.ordering);
+    
+    const queryString = queryParams.toString();
+    const url = `/sales/${queryString ? `?${queryString}` : ''}`;
+    
+    return apiRequest<{ results: Sale[]; count: number }>(url);
+  },
 
-  // Get single order
-  getOrder: (id: string): Promise<Order> =>
-    apiRequest<Order>(`/sales/orders/${id}/`),
+  // Get single sale
+  getSale: (id: number): Promise<Sale> =>
+    apiRequest<Sale>(`/sales/${id}/`),
 
-  // Delete order (if needed)
-  deleteOrder: (id: string): Promise<void> =>
-    apiRequest<void>(`/sales/orders/${id}/`, {
+  // Update sale status
+  updateSaleStatus: (id: number, status: string): Promise<Sale> =>
+    apiRequest<Sale>(`/sales/${id}/`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+
+  // Delete sale
+  deleteSale: (id: number): Promise<void> =>
+    apiRequest<void>(`/sales/${id}/`, {
       method: 'DELETE',
     }),
 
-  // Get sales statistics (if you have this endpoint)
-  getStats: (): Promise<SalesStats> =>
-    apiRequest<SalesStats>('/sales/stats/'),
-
   // -------------------
-  // CART MANAGEMENT (Frontend-only, since Django doesn't have cart endpoints)
+  // POS SALES API
   // -------------------
   
-  // Get cart from localStorage
+  // Create POS sale
+  createPOSSale: (saleData: CreatePOSSaleDto): Promise<POSSale> =>
+    apiRequest<POSSale>('/pos/pos-transactions/', {
+      method: 'POST',
+      body: JSON.stringify(saleData),
+    }),
+
+  // Get all POS sales
+  getPOSSales: (): Promise<POSSale[]> =>
+    apiRequest<POSSale[]>('/pos/pos-transactions/'),
+
+  // Get single POS sale
+  getPOSSale: (id: number): Promise<POSSale> =>
+    apiRequest<POSSale>(`/pos/pos-transactions/${id}/`),
+
+  // -------------------
+  // CART MANAGEMENT (Frontend-only)
+  // -------------------
+  
   getCartFromStorage: (): CartItem[] => {
     if (typeof window === 'undefined') return [];
     const cartJson = localStorage.getItem('cart');
     return cartJson ? JSON.parse(cartJson) : [];
   },
 
-  // Save cart to localStorage
   saveCartToStorage: (cart: CartItem[]): void => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('cart', JSON.stringify(cart));
   },
 
-  // Add item to cart (local storage)
   addToCart: (item: CartItem): CartItem[] => {
     const cart = salesApi.getCartFromStorage();
     const existingItemIndex = cart.findIndex(
-      (ci) => ci.inventory_id === item.inventory_id
+      (ci) => ci.product_id === item.product_id
     );
 
     if (existingItemIndex >= 0) {
-      // Update existing item
       cart[existingItemIndex].quantity += item.quantity;
-      cart[existingItemIndex].total_price = 
-        cart[existingItemIndex].quantity * cart[existingItemIndex].price_per_unit;
+      cart[existingItemIndex].line_total = 
+        cart[existingItemIndex].quantity * cart[existingItemIndex].unit_price;
     } else {
-      // Add new item
       cart.push(item);
     }
 
@@ -169,19 +227,16 @@ export const salesApi = {
     return cart;
   },
 
-  // Update cart item quantity
-  updateCartItem: (inventoryId: string, quantity: number): CartItem[] => {
+  updateCartItem: (productId: number, quantity: number): CartItem[] => {
     const cart = salesApi.getCartFromStorage();
-    const itemIndex = cart.findIndex((ci) => ci.inventory_id === inventoryId);
+    const itemIndex = cart.findIndex((ci) => ci.product_id === productId);
 
     if (itemIndex >= 0) {
       if (quantity <= 0) {
-        // Remove item if quantity is 0 or negative
         cart.splice(itemIndex, 1);
       } else {
-        // Update quantity
         cart[itemIndex].quantity = quantity;
-        cart[itemIndex].total_price = quantity * cart[itemIndex].price_per_unit;
+        cart[itemIndex].line_total = quantity * cart[itemIndex].unit_price;
       }
     }
 
@@ -189,41 +244,54 @@ export const salesApi = {
     return cart;
   },
 
-  // Remove item from cart
-  removeCartItem: (inventoryId: string): CartItem[] => {
+  removeCartItem: (productId: number): CartItem[] => {
     const cart = salesApi.getCartFromStorage();
-    const filteredCart = cart.filter((ci) => ci.inventory_id !== inventoryId);
+    const filteredCart = cart.filter((ci) => ci.product_id !== productId);
     salesApi.saveCartToStorage(filteredCart);
     return filteredCart;
   },
 
-  // Clear entire cart
   clearCart: (): void => {
     salesApi.saveCartToStorage([]);
   },
 
-  // Calculate cart total
   calculateCartTotal: (cart: CartItem[]): number => {
-    return cart.reduce((total, item) => total + item.total_price, 0);
+    return cart.reduce((total, item) => total + item.line_total, 0);
   },
 };
 
-// Helper to transform frontend cart to order data
-export function transformCartToOrderData(
+// Helper to transform frontend cart to sale data (online)
+export function transformCartToSaleData(
   cart: CartItem[],
-  customerData: {
-    name: string;
-    phone: string;
-    email?: string;
-  }
-): CreateOrderDto {
+  clientId: number,
+  shippingAddress: string
+): CreateSaleDto {
   return {
-    customer_name: customerData.name,
-    customer_phone: customerData.phone,
-    customer_email: customerData.email,
+    client: clientId,
+    shipping_address: shippingAddress,
     items: cart.map(item => ({
-      inventory_id: item.inventory_id,
+      product: item.product_id,
       quantity: item.quantity,
+      price_at_sale: item.unit_price,
+    })),
+  };
+}
+
+// Helper to transform frontend cart to POS sale data
+export function transformCartToPOSSaleData(
+  cart: CartItem[],
+  servedBy: string,
+  paymentMethod: 'cash' | 'card' | 'mobile_money',
+  clientId?: number
+): CreatePOSSaleDto {
+  return {
+    client: clientId,
+    payment_method: paymentMethod,
+    served_by: servedBy,
+    items: cart.map(item => ({
+      product: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
     })),
   };
 }

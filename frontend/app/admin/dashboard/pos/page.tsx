@@ -10,7 +10,8 @@ import CartSidebar from '@/components/admin/pos/CartSidebar';
 import InventoryGrid from '@/components/admin/pos/InventoryGrid';
 import CheckoutModal from '@/components/admin/pos/CheckoutModal';
 import { inventoryApi, Product } from '@/lib/api/inventoryApi';
-import { POSCartItem, CustomerData } from '@/types/pos'; // Import CustomerData here
+import { salesApi } from '@/lib/api/salesApi';
+import { POSCartItem } from '@/types/pos';
 
 export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -33,9 +34,10 @@ export default function POSPage() {
   useEffect(() => {
     let filtered = products;
     
-    if (selectedCategory !== 'all') {
+    if (selectedCategory !== 'all' && selectedCategory !== '0') {
       filtered = filtered.filter(product => 
-        product.category === selectedCategory
+        product.category?.toString() === selectedCategory.toString() || 
+        product.category_id?.toString() === selectedCategory.toString()
       );
     }
     
@@ -43,15 +45,16 @@ export default function POSPage() {
       const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(product => {
         return (
-          product.brand_name.toLowerCase().includes(searchLower) ||
-          product.product_name.toLowerCase().includes(searchLower) ||
+          (product.brand_name && product.brand_name.toLowerCase().includes(searchLower)) ||
+          (product.product_name && product.product_name.toLowerCase().includes(searchLower)) ||
           (product.description && product.description.toLowerCase().includes(searchLower))
         );
       });
     }
     
+    // Only show active products with stock
     filtered = filtered.filter(product => 
-      product.is_active && product.stock_qty > 0
+      product.is_active !== false && (product.stock_qty || 0) > 0
     );
     
     setFilteredProducts(filtered);
@@ -61,69 +64,82 @@ export default function POSPage() {
     try {
       setLoading(true);
       
-      const productsData = await inventoryApi.getProducts();
+      // Fetch products
+      const productsResponse = await inventoryApi.getProducts();
+      const productsData = Array.isArray(productsResponse) 
+        ? productsResponse 
+        : productsResponse.results || [];
       setProducts(productsData);
       
-      const categoriesData = await inventoryApi.getCategories();
-      setCategories(categoriesData);
+      // Try to fetch categories, but handle if endpoint doesn't exist
+      try {
+        const categoriesData = await inventoryApi.getCategories?.();
+        if (categoriesData) {
+          setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+        }
+      } catch (error) {
+        console.log('Categories endpoint not available or failed');
+        // Extract unique categories from products
+        const uniqueCategories = Array.from(
+          new Set(productsData.map(p => p.category_name).filter(Boolean))
+        ).map((name, index) => ({ id: index + 1, name }));
+        setCategories(uniqueCategories);
+      }
       
     } catch (error) {
       console.error('Failed to load data:', error);
-      toast.error('Failed to load data');
+      toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
   };
 
-  const getItemImage = (product: Product): string | undefined => {
-    if (product.image) {
-      if (product.image.startsWith('http')) {
-        return product.image;
-      }
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com';
-      return `${baseUrl}${product.image}`;
+  const addToCart = (product: Product, quantity: number = 1) => {
+    if (!product.id || !product.product_name || !product.selling_price) {
+      toast.error('Invalid product data');
+      return;
     }
-    return undefined;
-  };
 
-  const addToCart = (product: Product) => {
     setCart(prev => {
-      // Check if product is already in cart using product_id
-      const existing = prev.find(cartItem => cartItem.product_id === product.id);
+      const existingIndex = prev.findIndex(cartItem => cartItem.product_id === product.id);
       
-      if (existing) {
-        // Check if we can add more
-        if (existing.quantity >= product.stock_qty) {
+      if (existingIndex >= 0) {
+        const existingItem = prev[existingIndex];
+        const newQuantity = existingItem.quantity + quantity;
+        
+        // Check stock
+        if (newQuantity > (product.stock_qty || 0)) {
           toast.error(`Only ${product.stock_qty} units available`);
           return prev;
         }
         
-        return prev.map(cartItem =>
-          cartItem.product_id === product.id
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
-        );
+        const updatedCart = [...prev];
+        updatedCart[existingIndex] = {
+          ...existingItem,
+          quantity: newQuantity
+        };
+        return updatedCart;
       }
       
-      // Check stock
-      if (product.stock_qty <= 0) {
+      // Check stock for new item
+      if ((product.stock_qty || 0) <= 0) {
         toast.error('Out of stock');
         return prev;
       }
       
-      const imageUrl = getItemImage(product);
+      if (quantity > (product.stock_qty || 0)) {
+        toast.error(`Only ${product.stock_qty} units available`);
+        return prev;
+      }
       
       const newCartItem: POSCartItem = {
         id: `cart_${product.id}_${Date.now()}`,
         product_id: product.id,
-        name: `${product.brand_name} - ${product.product_name}`,
+        name: `${product.brand_name || ''} ${product.product_name}`.trim(),
         price: Number(product.selling_price),
-        quantity: 1,
-        stock_qty: product.stock_qty,
-        image: imageUrl,
-        image_url: imageUrl,
-        inventory_id: product.id,
-        stock: product.stock_qty,
+        quantity: quantity,
+        stock_qty: product.stock_qty || 0,
+        image: product.image,
         category_name: product.category_name
       };
       
@@ -141,7 +157,7 @@ export default function POSPage() {
     if (!cartItem) return;
     
     const product = products.find(p => p.id === cartItem.product_id);
-    if (product && quantity > product.stock_qty) {
+    if (product && quantity > (product.stock_qty || 0)) {
       toast.error(`Only ${product.stock_qty} units available`);
       return;
     }
@@ -173,22 +189,36 @@ export default function POSPage() {
     return calculateSubtotal() + calculateTax();
   };
 
-  const handleCheckout = async (customerData: CustomerData) => {
+  const handleCheckout = async (customerData: any) => {
     try {
       setCheckoutLoading(true);
       
-      console.log('Checkout data:', {
-        customerData,
-        cart,
-        subtotal: calculateSubtotal(),
-        tax: calculateTax(),
-        total: calculateTotal()
-      });
+      // Prepare items for POS sale
+      const posItems = cart.map(item => ({
+        product: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.price
+      }));
       
-      toast.success('Sale completed successfully!');
+      // Create POS sale data
+      const posSaleData = {
+        client: customerData.client_id || null, // Optional client ID
+        payment_method: customerData.payment_method || 'cash',
+        served_by: 'Admin User', // TODO: Get from auth context
+        items: posItems
+      };
+      
+      // Call the API to create POS sale
+      const createdSale = await salesApi.createPOSSale(posSaleData);
+      
+      toast.success(`Sale #${createdSale.id} completed successfully!`);
+      
+      // Clear cart and close modals
       clearCart();
       setShowCheckout(false);
+      setIsCartOpen(false);
       
+      // Refresh inventory data
       await loadData();
       
     } catch (error: any) {
@@ -203,7 +233,7 @@ export default function POSPage() {
 
   const posCategories = [
     { id: 'all', name: 'All Products' },
-    ...categories.map(cat => ({ id: cat.id, name: cat.name }))
+    ...categories.map(cat => ({ id: cat.id || cat.name, name: cat.name }))
   ];
 
   return (
@@ -240,6 +270,10 @@ export default function POSPage() {
         subtotal={calculateSubtotal()}
         tax={calculateTax()}
         total={calculateTotal()}
+        onCheckout={() => {
+          setIsCartOpen(false);
+          setShowCheckout(true);
+        }}
       />
 
       <AnimatePresence>
@@ -252,6 +286,7 @@ export default function POSPage() {
             subtotal={calculateSubtotal()}
             tax={calculateTax()}
             total={calculateTotal()}
+            servedBy="Admin User" // TODO: Get from auth context
           />
         )}
       </AnimatePresence>

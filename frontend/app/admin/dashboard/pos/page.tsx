@@ -9,103 +9,122 @@ import POSLayout from '@/components/admin/pos/POSLayout';
 import CartSidebar from '@/components/admin/pos/CartSidebar';
 import InventoryGrid from '@/components/admin/pos/InventoryGrid';
 import CheckoutModal from '@/components/admin/pos/CheckoutModal';
-import { inventoryApi, InventoryItem } from '@/lib/api/inventoryApi';
-import { salesApi } from '@/lib/api/salesApi';
-import { POSCartItem, CustomerData } from '@/types/pos';
+import { inventoryApi, Product } from '@/lib/api/inventoryApi';
+import { POSCartItem, CustomerData } from '@/types/pos'; // Import CustomerData here
 
 export default function POSPage() {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [filteredInventory, setFilteredInventory] = useState<InventoryItem[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | number>('all');
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  // Load inventory
+  // Load products and categories
   useEffect(() => {
-    loadInventory();
+    loadData();
   }, []);
 
-  // Filter inventory based on search term
+  // Filter products based on search term and category
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredInventory(inventory);
-      return;
+    let filtered = products;
+    
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product => 
+        product.category === selectedCategory
+      );
     }
     
-    const filtered = inventory.filter(item => {
+    if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase();
-      return (
-        item.brand_name.toLowerCase().includes(searchLower) ||
-        (item.description && item.description.toLowerCase().includes(searchLower))
-      );
-    });
+      filtered = filtered.filter(product => {
+        return (
+          product.brand_name.toLowerCase().includes(searchLower) ||
+          product.product_name.toLowerCase().includes(searchLower) ||
+          (product.description && product.description.toLowerCase().includes(searchLower))
+        );
+      });
+    }
     
-    setFilteredInventory(filtered);
-  }, [searchTerm, inventory]);
+    filtered = filtered.filter(product => 
+      product.is_active && product.stock_qty > 0
+    );
+    
+    setFilteredProducts(filtered);
+  }, [searchTerm, selectedCategory, products]);
 
-  const loadInventory = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const data = await inventoryApi.list();
-      const activeItems = data.filter(item => 
-        item.is_active && item.quantity_in_stock > 0
-      );
-      setInventory(activeItems);
-      setFilteredInventory(activeItems);
+      
+      const productsData = await inventoryApi.getProducts();
+      setProducts(productsData);
+      
+      const categoriesData = await inventoryApi.getCategories();
+      setCategories(categoriesData);
+      
     } catch (error) {
-      console.error('Failed to load inventory:', error);
-      toast.error('Failed to load inventory');
+      console.error('Failed to load data:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
   };
 
-  const getItemImage = (item: InventoryItem): string | undefined => {
-    if (item.image) {
-      return item.image.startsWith('http') 
-        ? item.image 
-        : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}${item.image}`;
+  const getItemImage = (product: Product): string | undefined => {
+    if (product.image) {
+      if (product.image.startsWith('http')) {
+        return product.image;
+      }
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com';
+      return `${baseUrl}${product.image}`;
     }
     return undefined;
   };
 
-  const addToCart = (item: InventoryItem) => {
+  const addToCart = (product: Product) => {
     setCart(prev => {
-      // Convert item.id to string for comparison
-      const itemIdString = item.id.toString();
-      const existing = prev.find(cartItem => cartItem.inventory_id === itemIdString);
+      // Check if product is already in cart using product_id
+      const existing = prev.find(cartItem => cartItem.product_id === product.id);
       
       if (existing) {
-        if (existing.quantity >= item.quantity_in_stock) {
-          toast.error('Insufficient stock');
+        // Check if we can add more
+        if (existing.quantity >= product.stock_qty) {
+          toast.error(`Only ${product.stock_qty} units available`);
           return prev;
         }
+        
         return prev.map(cartItem =>
-          cartItem.inventory_id === itemIdString
+          cartItem.product_id === product.id
             ? { ...cartItem, quantity: cartItem.quantity + 1 }
             : cartItem
         );
       }
       
-      if (item.quantity_in_stock <= 0) {
+      // Check stock
+      if (product.stock_qty <= 0) {
         toast.error('Out of stock');
         return prev;
       }
       
-      const itemImage = getItemImage(item);
+      const imageUrl = getItemImage(product);
       
       const newCartItem: POSCartItem = {
-        id: itemIdString,
-        inventory_id: itemIdString,
-        name: item.brand_name,
-        price: item.selling_price,
+        id: `cart_${product.id}_${Date.now()}`,
+        product_id: product.id,
+        name: `${product.brand_name} - ${product.product_name}`,
+        price: Number(product.selling_price),
         quantity: 1,
-        image: itemImage,
-        image_url: itemImage,
-        stock: item.quantity_in_stock
+        stock_qty: product.stock_qty,
+        image: imageUrl,
+        image_url: imageUrl,
+        inventory_id: product.id,
+        stock: product.stock_qty,
+        category_name: product.category_name
       };
       
       return [...prev, newCartItem];
@@ -118,9 +137,12 @@ export default function POSPage() {
       return;
     }
     
-    const item = cart.find(item => item.id === id);
-    if (item && item.stock && quantity > item.stock) {
-      toast.error(`Only ${item.stock} units available`);
+    const cartItem = cart.find(item => item.id === id);
+    if (!cartItem) return;
+    
+    const product = products.find(p => p.id === cartItem.product_id);
+    if (product && quantity > product.stock_qty) {
+      toast.error(`Only ${product.stock_qty} units available`);
       return;
     }
     
@@ -155,23 +177,19 @@ export default function POSPage() {
     try {
       setCheckoutLoading(true);
       
-      const orderData = {
-        customer_name: customerData.name,
-        customer_phone: customerData.phone,
-        customer_email: customerData.email,
-        items: cart.map(item => ({
-          inventory_id: item.inventory_id,
-          quantity: item.quantity,
-        })),
-      };
-
-      const order = await salesApi.createOrder(orderData);
+      console.log('Checkout data:', {
+        customerData,
+        cart,
+        subtotal: calculateSubtotal(),
+        tax: calculateTax(),
+        total: calculateTotal()
+      });
       
       toast.success('Sale completed successfully!');
       clearCart();
       setShowCheckout(false);
       
-      await loadInventory();
+      await loadData();
       
     } catch (error: any) {
       console.error('Checkout error:', error);
@@ -182,6 +200,11 @@ export default function POSPage() {
   };
 
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const posCategories = [
+    { id: 'all', name: 'All Products' },
+    ...categories.map(cat => ({ id: cat.id, name: cat.name }))
+  ];
 
   return (
     <>
@@ -194,14 +217,14 @@ export default function POSPage() {
         checkoutDisabled={cart.length === 0}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        onRefresh={loadInventory}
-        filteredProducts={filteredInventory}
-        selectedCategory="all"
-        onCategoryChange={() => {}}
-        categories={[]}
+        onRefresh={loadData}
+        filteredProducts={filteredProducts}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        categories={posCategories}
       >
         <InventoryGrid
-          inventory={filteredInventory}
+          products={filteredProducts}
           loading={loading}
           onAddToCart={addToCart}
         />

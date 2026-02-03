@@ -4,6 +4,11 @@
 import { Search, ShoppingCart, RefreshCw, Grid, List, Filter } from 'lucide-react';
 import { useState } from 'react';
 
+interface CategoryOption {
+  id: string | number;
+  name: string;
+}
+
 interface POSLayoutProps {
   children: React.ReactNode;
   cartItemCount: number;
@@ -12,9 +17,9 @@ interface POSLayoutProps {
   checkoutDisabled: boolean;
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  selectedCategory: string;
-  onCategoryChange: (category: string) => void;
-  categories: string[];
+  selectedCategory: string | number;
+  onCategoryChange: (category: string | number) => void;
+  categories: CategoryOption[];
   onRefresh: () => void;
   filteredProducts: any[];
 }
@@ -35,6 +40,11 @@ export default function POSLayout({
 }: POSLayoutProps) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCategories, setShowCategories] = useState(false);
+
+  // Find the selected category name for display
+  const selectedCategoryName = selectedCategory === 'all' 
+    ? 'Categories' 
+    : categories.find(cat => cat.id === selectedCategory)?.name || 'Categories';
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
@@ -117,25 +127,39 @@ export default function POSLayout({
               >
                 <Filter className="h-3 w-3" />
                 <span className="font-medium truncate max-w-20 md:max-w-none">
-                  {selectedCategory === 'all' ? 'Categories' : selectedCategory}
+                  {selectedCategoryName}
                 </span>
               </button>
 
               {showCategories && (
                 <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
                   <div className="p-1 max-h-60 overflow-y-auto">
+                    {/* All Categories Option */}
+                    <button
+                      onClick={() => {
+                        onCategoryChange('all');
+                        setShowCategories(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 ${
+                        selectedCategory === 'all' ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700'
+                      }`}
+                    >
+                      All Products
+                    </button>
+                    
+                    {/* Category Options */}
                     {categories.map((category) => (
                       <button
-                        key={category}
+                        key={category.id}
                         onClick={() => {
-                          onCategoryChange(category);
+                          onCategoryChange(category.id);
                           setShowCategories(false);
                         }}
                         className={`w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-100 ${
-                          selectedCategory === category ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700'
+                          selectedCategory === category.id ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700'
                         }`}
                       >
-                        {category === 'all' ? 'All' : category}
+                        {category.name}
                       </button>
                     ))}
                   </div>

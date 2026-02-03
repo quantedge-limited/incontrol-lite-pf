@@ -1,12 +1,11 @@
-// components/admin/overview/OverviewDashboard.tsx - COMPLETE VERSION
+// components/admin/overview/OverviewDashboard.tsx - COMPLETE VERSION (FIXED)
 "use client";
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import SalesChart from '../sales/SalesChart';
-import { salesApi } from '@/lib/api/salesApi';
-import { inventoryApi } from '@/lib/api/inventoryApi';
+import { inventoryApi } from '@/lib/api/inventoryApi'; // Import the corrected API
 
 {/*
   
@@ -49,8 +48,8 @@ export default function OverviewDashboard() {
       setLoading(true);
       setError('');
 
-      // Fetch only available data
-      const inventory = await inventoryApi.list().catch(() => []);
+      // Fetch inventory data using the correct API method
+      const inventory = await inventoryApi.getProducts().catch(() => []); // FIXED: Changed from .list() to .getProducts()
       setInventoryCount(inventory.length);
       
       // Try to load from localStorage for demo

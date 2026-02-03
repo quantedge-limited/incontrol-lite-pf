@@ -4,7 +4,7 @@
 import { motion } from 'framer-motion';
 import { X, CreditCard, Smartphone, Wallet, User, Phone, Mail, MapPin } from 'lucide-react';
 import { useState } from 'react';
-import { POSCartItem, CustomerData } from '@/types/pos';
+import { POSCartItem, CustomerData } from '@/types/pos'; // Or from '@/components/admin/pos/types'
 
 {/*
   
@@ -44,11 +44,19 @@ export default function CheckoutModal({
       name: customerName,
       phone: customerPhone,
       email: customerEmail || undefined,
-      paymentMethod,
+      paymentMethod: paymentMethod || undefined, // Make optional
       address: customerAddress || undefined,
     };
     
     await onCheckout(customerData);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   const paymentMethods = [
@@ -56,6 +64,11 @@ export default function CheckoutModal({
     { id: 'mpesa', name: 'M-Pesa', icon: Smartphone },
     { id: 'card', name: 'Credit Card', icon: CreditCard },
   ];
+
+  // Calculate item totals for display
+  const calculateItemTotal = (item: POSCartItem) => {
+    return item.price * item.quantity;
+  };
 
   return (
     <div className="fixed inset-0 bg-white/10 backdrop-blur-md flex items-center justify-center z-50 p-4">
@@ -65,9 +78,9 @@ export default function CheckoutModal({
         exit={{ opacity: 0, scale: 0.95 }}
         className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
       >
-        <div className="flex h-full">
+        <div className="flex h-full flex-col lg:flex-row">
           {/* Left Side - Order Summary */}
-          <div className="flex-1 p-8 overflow-y-auto">
+          <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
               <button
@@ -88,11 +101,11 @@ export default function CheckoutModal({
                     <div>
                       <p className="font-medium">{item.name}</p>
                       <p className="text-sm text-gray-600">
-                        {item.quantity} × KES {item.price.toLocaleString()}
+                        {item.quantity} × {formatCurrency(item.price)}
                       </p>
                     </div>
                     <p className="font-bold">
-                      KES {(item.quantity * item.price).toLocaleString()}
+                      {formatCurrency(calculateItemTotal(item))}
                     </p>
                   </div>
                 ))}
@@ -103,15 +116,15 @@ export default function CheckoutModal({
             <div className="space-y-2 mb-8">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
-                <span>KES {subtotal.toLocaleString()}</span>
+                <span>{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Tax (16% VAT)</span>
-                <span>KES {tax.toLocaleString()}</span>
+                <span>{formatCurrency(tax)}</span>
               </div>
               <div className="flex justify-between text-xl font-bold text-gray-900 pt-3 border-t">
                 <span>Total</span>
-                <span>KES {total.toLocaleString()}</span>
+                <span>{formatCurrency(total)}</span>
               </div>
             </div>
 
@@ -124,6 +137,7 @@ export default function CheckoutModal({
                   setCustomerAddress('In-store pickup');
                 }}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                disabled={loading}
               >
                 Walk-in
               </button>
@@ -135,6 +149,7 @@ export default function CheckoutModal({
                   setCustomerAddress('123 Main Street, Nairobi');
                 }}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                disabled={loading}
               >
                 Regular
               </button>
@@ -146,6 +161,7 @@ export default function CheckoutModal({
                   setCustomerAddress('Corporate Office, Westlands');
                 }}
                 className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
+                disabled={loading}
               >
                 Corporate
               </button>
@@ -153,7 +169,7 @@ export default function CheckoutModal({
           </div>
 
           {/* Right Side - Customer & Payment */}
-          <div className="flex-1 p-8 bg-gradient-to-b from-emerald-50 to-white">
+          <div className="flex-1 p-6 lg:p-8 bg-gradient-to-b from-emerald-50 to-white">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Customer Info */}
               <div>
@@ -163,7 +179,7 @@ export default function CheckoutModal({
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Customer Name"
+                      placeholder="Customer Name *"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -176,7 +192,7 @@ export default function CheckoutModal({
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                     <input
                       type="tel"
-                      placeholder="Phone Number"
+                      placeholder="Phone Number *"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"

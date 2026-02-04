@@ -1,45 +1,25 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { salesApi } from '@/lib/api/salesApi';
+import { useCart } from '@/context/cart/CartContext';
+import { posApi } from '@/lib/api/sales';
 import { toast } from 'react-toastify';
-import type { CartItem } from '@/lib/api/salesApi';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const { items: cart, clearCart } = useCart();
   const [formData, setFormData] = useState({
-    customer_name: '', 
-    customer_email: '', 
-    customer_phone: '', 
+    customer_name: '',
+    customer_email: '',
+    customer_phone: '',
     notes: '',
   });
 
-  useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const fetchCart = () => {
-    try {
-      // Use local storage cart instead of API call
-      const cartData = salesApi.getCartFromStorage();
-      setCart(cartData);
-      if (cartData.length === 0) {
-        toast.error('Your cart is empty');
-        router.push('/');
-      }
-    } catch (error) {
-      console.error('Failed to fetch cart:', error);
-      toast.error('Failed to load cart');
-      router.push('/');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (cart.length === 0) {
       toast.error('Your cart is empty');
       return;
@@ -52,28 +32,28 @@ export default function CheckoutPage() {
 
     try {
       setLoading(true);
-      
-      // Transform cart to order data matching your Django backend
-      const orderData = {
-        customer_name: formData.customer_name,
-        customer_phone: formData.customer_phone,
-        customer_email: formData.customer_email || undefined,
+
+      // Transform cart to POS transaction format
+      const posData = {
+        payment_method: 'cash' as const, // Default to cash, can be changed to support other methods
+        served_by: `Online - ${formData.customer_name}`,
         items: cart.map(item => ({
-          inventory_id: item.inventory_id,
+          product: item.inventory_id,
           quantity: item.quantity,
-        })),
+          unit_price: item.price_per_unit
+        }))
       };
 
-      // Use createOrder instead of checkout
-      const order = await salesApi.createOrder(orderData);
-      
-      toast.success('Order created successfully!');
-      
+      // Create POS transaction
+      const transaction = await posApi.createSale(posData);
+
+      toast.success('Order placed successfully!');
+
       // Clear cart after successful order
-      salesApi.clearCart();
-      
-      // Redirect to order confirmation or payment page
-      router.push(`/order/${order.id}`);
+      await clearCart();
+
+      // Redirect to success page or home
+      router.push(`/?order_success=true&order_id=${transaction.id}`);
     } catch (error: any) {
       toast.error(error.message || 'Checkout failed');
       console.error(error);
@@ -111,13 +91,13 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Order Summary */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h2>
-              
+
               {cart.length === 0 ? (
                 <p className="text-gray-500">Your cart is empty</p>
               ) : (
@@ -135,7 +115,7 @@ export default function CheckoutPage() {
                       </p>
                     </div>
                   ))}
-                  
+
                   <div className="pt-4 border-t">
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total</span>
@@ -151,7 +131,7 @@ export default function CheckoutPage() {
             {/* Customer Information Form */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Customer Information</h2>
-              
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -229,7 +209,7 @@ export default function CheckoutPage() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Order Total</h3>
-              
+
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>

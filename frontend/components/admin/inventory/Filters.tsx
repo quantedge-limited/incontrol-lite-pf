@@ -3,11 +3,6 @@
 import React from 'react';
 import { Search, Filter, X } from 'lucide-react';
 
-{/*
-  This code defines a Filtering Component for your product inventory. 
-  It allows users to narrow down a large list of products using multiple criteria.
-  Updated to match your backend data structure (no supplier filter on products).
-  */}
 
 interface FiltersProps {
   query: string;

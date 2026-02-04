@@ -1,15 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { cartApi } from '@/lib/api/sales';
 import { toast } from 'react-toastify';
 
 {/*
   
   CartContext provides a context for managing the shopping cart state.
-   It includes functions to add, update, remove items, clear the cart, 
-   and refresh the cart data from the backend API. It also handles loading and error states, 
-   and provides user feedback via toast notifications.
+   It uses localStorage for persistence since the backend doesn't have cart endpoints.
+   All cart operations are client-side until checkout, when a POS transaction is created.
 
 */}
 
@@ -41,9 +39,9 @@ interface CartContextType {
   isLoading?: boolean; // Optional alias for loading
   error: string | null;
   items: CartItem[];
-  cartCount: number; // Add this
+  cartCount: number;
   
-  addItem: (inventoryId: number, quantity?: number) => Promise<void>;
+  addItem: (inventoryId: number, quantity?: number, itemDetails?: { name: string; price: number; image?: string }) => Promise<void>;
   updateItem: (itemId: string, quantity: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -54,13 +52,52 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 // Default empty cart
 const defaultCart: Cart = {
-  id: '',
-  session_id: '',
+  id: 'local-cart',
+  session_id: typeof window !== 'undefined' ? (localStorage.getItem('session_id') || generateSessionId()) : 'temp',
   items: [],
   total_price: 0,
-  created_at: '',
-  updated_at: ''
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
 };
+
+function generateSessionId(): string {
+  const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('session_id', sessionId);
+  }
+  return sessionId;
+}
+
+function loadCartFromStorage(): Cart {
+  if (typeof window === 'undefined') return defaultCart;
+  
+  try {
+    const stored = localStorage.getItem('cart');
+    if (stored) {
+      const cart = JSON.parse(stored);
+      return {
+        ...cart,
+        updated_at: new Date().toISOString()
+      };
+    }
+  } catch (error) {
+    console.error('Failed to load cart from storage:', error);
+  }
+  return defaultCart;
+}
+
+function saveCartToStorage(cart: Cart): void {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem('cart', JSON.stringify({
+      ...cart,
+      updated_at: new Date().toISOString()
+    }));
+  } catch (error) {
+    console.error('Failed to save cart to storage:', error);
+  }
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<Cart>(defaultCart);
@@ -74,11 +111,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const cartData = await cartApi.getCart();
+      const cartData = loadCartFromStorage();
       setCart(cartData);
     } catch (err: any) {
       setError(err.message);
-      // Set default cart if error
       setCart(defaultCart);
       console.error('Failed to load cart:', err);
     } finally {
@@ -86,12 +122,42 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const addItem = useCallback(async (inventoryId: number, quantity: number = 1) => {
+  const addItem = useCallback(async (
+    inventoryId: number, 
+    quantity: number = 1,
+    itemDetails?: { name: string; price: number; image?: string }
+  ) => {
     setLoading(true);
     setError(null);
     try {
-      await cartApi.addToCart(inventoryId, quantity);
-      await refreshCart();
+      const currentCart = loadCartFromStorage();
+      const existingItemIndex = currentCart.items.findIndex(item => item.inventory_id === inventoryId);
+      
+      if (existingItemIndex >= 0) {
+        // Update existing item
+        currentCart.items[existingItemIndex].quantity += quantity;
+        currentCart.items[existingItemIndex].total_price = 
+          currentCart.items[existingItemIndex].quantity * currentCart.items[existingItemIndex].price_per_unit;
+      } else {
+        // Add new item
+        const newItem: CartItem = {
+          id: `item-${Date.now()}-${inventoryId}`,
+          inventory_id: inventoryId,
+          inventory_name: itemDetails?.name || `Product ${inventoryId}`,
+          quantity: quantity,
+          price_per_unit: itemDetails?.price || 0,
+          total_price: (itemDetails?.price || 0) * quantity,
+          image_url: itemDetails?.image
+        };
+        currentCart.items.push(newItem);
+      }
+      
+      // Recalculate total
+      currentCart.total_price = currentCart.items.reduce((sum, item) => sum + item.total_price, 0);
+      currentCart.updated_at = new Date().toISOString();
+      
+      saveCartToStorage(currentCart);
+      setCart(currentCart);
       toast.success('Item added to cart');
     } catch (err: any) {
       setError(err.message);
@@ -100,15 +166,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, []);
 
   const updateItem = useCallback(async (itemId: string, quantity: number) => {
     setLoading(true);
     setError(null);
     try {
-      await cartApi.updateCartItem(itemId, quantity);
-      await refreshCart();
-      toast.success('Cart updated');
+      const currentCart = loadCartFromStorage();
+      const itemIndex = currentCart.items.findIndex(item => item.id === itemId);
+      
+      if (itemIndex >= 0) {
+        if (quantity <= 0) {
+          // Remove item if quantity is 0 or less
+          currentCart.items.splice(itemIndex, 1);
+        } else {
+          currentCart.items[itemIndex].quantity = quantity;
+          currentCart.items[itemIndex].total_price = 
+            quantity * currentCart.items[itemIndex].price_per_unit;
+        }
+        
+        // Recalculate total
+        currentCart.total_price = currentCart.items.reduce((sum, item) => sum + item.total_price, 0);
+        currentCart.updated_at = new Date().toISOString();
+        
+        saveCartToStorage(currentCart);
+        setCart(currentCart);
+        toast.success('Cart updated');
+      }
     } catch (err: any) {
       setError(err.message);
       toast.error(`Failed to update item: ${err.message}`);
@@ -116,14 +200,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, []);
 
   const removeItem = useCallback(async (itemId: string) => {
     setLoading(true);
     setError(null);
     try {
-      await cartApi.removeCartItem(itemId);
-      await refreshCart();
+      const currentCart = loadCartFromStorage();
+      currentCart.items = currentCart.items.filter(item => item.id !== itemId);
+      
+      // Recalculate total
+      currentCart.total_price = currentCart.items.reduce((sum, item) => sum + item.total_price, 0);
+      currentCart.updated_at = new Date().toISOString();
+      
+      saveCartToStorage(currentCart);
+      setCart(currentCart);
       toast.success('Item removed from cart');
     } catch (err: any) {
       setError(err.message);
@@ -132,14 +223,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, []);
 
   const clearCart = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      await cartApi.clearCart();
-      await refreshCart();
+      const emptyCart = {
+        ...defaultCart,
+        session_id: cart.session_id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      saveCartToStorage(emptyCart);
+      setCart(emptyCart);
       toast.success('Cart cleared');
     } catch (err: any) {
       setError(err.message);
@@ -148,7 +246,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, [cart.session_id]);
 
   // Initialize cart on mount
   useEffect(() => {
@@ -160,9 +258,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       cart,
       items: cart.items,
       loading,
-      isLoading: loading, // Provide both for compatibility
+      isLoading: loading,
       error,
-      cartCount, // Add this
+      cartCount,
       addItem,
       updateItem,
       removeItem,

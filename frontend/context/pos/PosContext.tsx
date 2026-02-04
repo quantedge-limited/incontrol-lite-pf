@@ -25,7 +25,7 @@ interface PosContextType {
     page_size: number;
     pages: number;
   };
-  
+
   fetchSales: (params?: any) => Promise<void>;
   createSale: (data: any) => Promise<Sale>;
   cancelSale: (saleId: string) => Promise<void>;
@@ -51,14 +51,14 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const data = await posApi.getSales(params);
-      // Extract just the sales array from the response
-      setSales(data.sales);
+      // Extract results array from the response (Django REST framework pagination)
+      setSales(data.results);
       // Store pagination data if needed
       setPagination({
-        total: data.total,
-        page: data.page,
-        page_size: data.page_size,
-        pages: data.pages,
+        total: data.count,
+        page: params?.page || 1,
+        page_size: params?.page_size || 20,
+        pages: Math.ceil(data.count / (params?.page_size || 20)),
       });
     } catch (err: any) {
       setError(err.message);
@@ -86,7 +86,7 @@ export function PosProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      await posApi.cancelSale(saleId);
+      await posApi.deleteSale(saleId);
       setSales(prev => prev.filter(sale => sale.id !== saleId));
       if (selectedSale?.id === saleId) {
         setSelectedSale(null);

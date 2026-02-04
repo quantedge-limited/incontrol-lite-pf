@@ -215,10 +215,6 @@ export const inventoryApi = {
     search?: string;
     ordering?: string;
   }): Promise<Product[]> {
-    // Check auth first
-    checkAuth();
-    
-    const token = getAuthToken();
     const url = new URL(`${API_BASE}/inventory/products/`);
     
     // Add query parameters if provided
@@ -233,15 +229,13 @@ export const inventoryApi = {
     const res = await fetch(url.toString(), {
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`, // Add auth header
+        // No Authorization header anymore
       },
     });
     
     if (!res.ok) {
-      if (res.status === 401) {
-        throw new Error('Please login to access products');
-      }
-      throw new Error('Failed to fetch products');
+      // Remove the 401 check since we're not using auth
+      throw new Error(`Failed to fetch products: ${res.status} ${res.statusText}`);
     }
     
     return res.json();

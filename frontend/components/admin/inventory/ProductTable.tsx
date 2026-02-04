@@ -125,7 +125,7 @@ export default function ProductTable({
                   )}
                 </td>
 
-                {/* Price & Stock */}
+                {/* Price & Stock section - fix the edit button visibility */}
                 <td className="px-6 py-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -168,9 +168,11 @@ export default function ProductTable({
                       }`}>
                         <Package className="h-3 w-3" />
                         {product.stock_qty} units
+                        {/* Removed opacity classes to make button always visible */}
                         <button 
                           onClick={() => startEdit(product)}
-                          className="ml-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="ml-1 text-xs hover:text-emerald-700 transition-colors"
+                          title="Edit stock"
                         >
                           <Edit2 className="h-3 w-3" />
                         </button>

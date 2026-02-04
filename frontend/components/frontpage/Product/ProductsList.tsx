@@ -31,28 +31,23 @@ export const ProductsList: React.FC<ProductsListProps> = ({ onAddToCart }) => {
   // Fetch public products
   useEffect(() => {
     const fetchProducts = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        setError(null);
-
+        // FIX: Call getCustomerProducts without any parameters
+        // Your current API doesn't accept parameters for public endpoint
         const data = await productApi.getCustomerProducts();
-        
-        // Filter only active products
-        const activeProducts = data.filter((item: FrontendProduct) => 
-          item.is_active && item.inStock
-        );
-        
-        setProducts(activeProducts);
+        setProducts(data);
+        setError(null);
       } catch (err) {
-        console.error('Failed to load products:', err);
-        setError('Failed to load products. Please try again later.');
+        console.error('Error fetching products:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load products');
       } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
-  }, []);
+  }, []); // Empty dependency array - fetch once on mount
 
   // Get unique categories
   const categories = Array.from(
@@ -80,13 +75,13 @@ export const ProductsList: React.FC<ProductsListProps> = ({ onAddToCart }) => {
   const handleProductAddToCart = (productData: any) => {
     if (onAddToCart) {
       const cartProduct: CartProduct = {
-        id: productData.id,
+        id: productData.id.toString(), // Convert to string
         name: productData.name,
         price: productData.price,
         description: productData.description,
         quantity: 1, // Default quantity
-        image: productData.image_path,
-        brand: productData.brand || productData.name,
+        image: productData.image,
+        brand: productData.category || productData.name, // Use category as brand
       };
       onAddToCart(cartProduct);
     }

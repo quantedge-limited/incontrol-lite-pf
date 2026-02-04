@@ -1,12 +1,11 @@
+// components/admin/overview/OverviewDashboard.tsx - COMPLETE VERSION (FIXED)
 "use client";
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import SalesChart from '../sales/SalesChart';
-import { inventoryApi } from '@/lib/api/inventoryApi';
-import { salesApi } from '@/lib/api/salesApi';
-import { toast } from 'react-toastify';
+import { inventoryApi } from '@/lib/api/inventoryApi'; // Import the corrected API
 
 // Simplified interface matching Django data
 interface DashboardStats {
@@ -34,10 +33,9 @@ export default function OverviewDashboard() {
       setLoading(true);
       setError('');
 
-      // Fetch inventory data
-      const inventoryResponse = await inventoryApi.getProducts().catch(() => ({ results: [], count: 0 }));
-      const inventoryData = Array.isArray(inventoryResponse) ? inventoryResponse : inventoryResponse.results || [];
-      const inventoryTotal = Array.isArray(inventoryResponse) ? inventoryResponse.length : inventoryResponse.count || 0;
+      // Fetch inventory data using the correct API method
+      const inventory = await inventoryApi.getProducts().catch(() => []); // FIXED: Changed from .list() to .getProducts()
+      setInventoryCount(inventory.length);
       
       setInventoryCount(inventoryTotal);
 

@@ -6,9 +6,9 @@ import { motion } from 'framer-motion';
 import { useCart } from '@/context/cart/CartContext';
 
 interface ProductCardProps {
-  id: number;
-  name: string;
-  price: number;
+  id: number | string;
+  name: string;  // Changed back to match ProductsList
+  price: number;  // Changed back to match ProductsList
   description?: string;
   quantity: number;
   inStock: boolean;

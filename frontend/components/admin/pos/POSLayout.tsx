@@ -40,6 +40,7 @@ export default function POSLayout({
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCategories, setShowCategories] = useState(false);
 
+  // Find the selected category name for display
   const selectedCategoryName = selectedCategory === 'all' 
     ? 'Categories' 
     : categories.find(cat => cat.id === selectedCategory)?.name || 'Categories';
@@ -116,13 +117,16 @@ export default function POSLayout({
                 onClick={() => setShowCategories(!showCategories)}
                 className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50"
               >
-                <Filter className="h-4 w-4" />
-                <span className="font-medium">{selectedCategoryName}</span>
+                <Filter className="h-3 w-3" />
+                <span className="font-medium truncate max-w-20 md:max-w-none">
+                  {selectedCategoryName}
+                </span>
               </button>
 
               {showCategories && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
-                  <div className="p-2 max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+                  <div className="p-1 max-h-60 overflow-y-auto">
+                    {/* All Categories Option */}
                     <button
                       onClick={() => {
                         onCategoryChange('all');
@@ -135,6 +139,7 @@ export default function POSLayout({
                       All Products
                     </button>
                     
+                    {/* Category Options */}
                     {categories.map((category) => (
                       <button
                         key={category.id}

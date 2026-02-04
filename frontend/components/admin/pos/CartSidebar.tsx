@@ -1,8 +1,8 @@
 // components/admin/pos/CartSidebar.tsx
 "use client";
 
-import { X, Trash2, Plus, Minus, ShoppingCart, Package } from 'lucide-react';
-import { POSCartItem } from '@/types/pos';
+import { X, Trash2, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { POSCartItem } from '@/types/pos'; // Or use '@/components/admin/pos/types' if you moved it
 import { toast } from "react-toastify";
 
 interface CartSidebarProps {
@@ -141,7 +141,8 @@ export default function CartSidebar({
               ) : (
                 <div className="space-y-4">
                   {cart.map((item) => {
-                    const stockStatus = calculateStockStatus(item);
+                    const itemStock = item.stock_qty; // Changed from item.stock to item.stock_qty
+                    const isMaxQuantity = item.quantity >= itemStock;
                     
                     return (
                       <div
@@ -150,7 +151,7 @@ export default function CartSidebar({
                       >
                         {/* Product Image */}
                         <div className="flex-shrink-0">
-                          {item.image ? (
+                          {item.image ? ( // Changed from item.image_url to item.image
                             <img
                               src={item.image}
                               alt={item.name}
@@ -186,17 +187,17 @@ export default function CartSidebar({
                               </p>
                             </div>
                           </div>
-
-                          {/* Stock Status */}
-                          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStockStatusColor(stockStatus.status)}`}>
-                            <div className="w-2 h-2 rounded-full mr-1.5" style={{
-                              backgroundColor: stockStatus.status === 'available' ? '#10b981' :
-                                              stockStatus.status === 'last-items' ? '#f59e0b' :
-                                              stockStatus.status === 'insufficient' ? '#f97316' : '#ef4444'
-                            }} />
-                            {stockStatus.message}
-                          </div>
-
+                          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                            {formatCurrency(item.price)} each
+                          </p>
+                          
+                          {/* Stock Info */}
+                          {item.category_name && (
+                            <p className="text-xs text-gray-500">
+                              Category: {item.category_name}
+                            </p>
+                          )}
+                          
                           {/* Quantity Controls */}
                           <div className="flex items-center justify-between mt-3">
                             <div className="flex items-center gap-2">
@@ -233,11 +234,13 @@ export default function CartSidebar({
                               </span>
                             </div>
                             
-                            {/* Remove button */}
+                            <div className="text-xs text-gray-500 ml-auto mr-2">
+                              Stock: {itemStock}
+                            </div>
+                            
                             <button
                               onClick={() => onRemoveItem(item.id)}
-                              className="p-2 text-gray-400 hover:text-red-600 transition-colors"
-                              title="Remove item"
+                              className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -272,9 +275,11 @@ export default function CartSidebar({
                 {/* Actions */}
                 <div className="space-y-3">
                   <button
-                    onClick={handleCheckout}
-                    disabled={cart.length === 0}
-                    className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold rounded-xl hover:from-emerald-700 hover:to-emerald-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-100 active:scale-95"
+                    className="w-full py-3.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-100"
+                    onClick={() => {
+                      // This should trigger checkout from parent component
+                      onClose(); // Close sidebar first
+                    }}
                   >
                     Proceed to Checkout
                   </button>

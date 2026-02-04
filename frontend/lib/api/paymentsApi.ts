@@ -1,23 +1,29 @@
-// lib/api/paymentsApi.ts - Updated for Stripe integration
+// lib/api/paymentsApi.ts - Updated for M-Pesa integration
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
 export interface Payment {
   id: number;
   sale: number; // Sale ID
-  stripe_payment_intent_id: string;
+  mpesa_transaction_id?: string;
+  mpesa_checkout_request_id?: string;
+  phone_number: string;
   amount: number;
-  currency: string;
-  status: 'pending' | 'succeeded' | 'failed';
+  status: 'pending' | 'completed' | 'failed';
   created_at: string;
 }
 
-export interface CreatePaymentIntentRequest {
+export interface CreateMpesaPaymentRequest {
   sale_id: number;
+  phone_number: string;
+  amount?: number;
+  description?: string;
 }
 
-export interface CreatePaymentIntentResponse {
-  clientSecret: string;
+export interface CreateMpesaPaymentResponse {
+  success: boolean;
   message?: string;
+  checkout_request_id?: string;
+  transaction_id?: string;
 }
 
 async function apiRequest<T>(
@@ -56,11 +62,17 @@ async function apiRequest<T>(
 }
 
 export const paymentsApi = {
-  // Create Stripe payment intent
-  createPaymentIntent: (paymentData: CreatePaymentIntentRequest): Promise<CreatePaymentIntentResponse> =>
-    apiRequest<CreatePaymentIntentResponse>('/payments/create-intent/', {
+  // Initiate M-Pesa payment (STK Push)
+  initiatePayment: (paymentData: CreateMpesaPaymentRequest): Promise<CreateMpesaPaymentResponse> =>
+    apiRequest<CreateMpesaPaymentResponse>('/payments/initiate-mpesa/', {
       method: 'POST',
       body: JSON.stringify(paymentData),
+    }),
+
+  // Check M-Pesa payment status
+  checkPaymentStatus: (checkoutRequestId: string): Promise<Payment> =>
+    apiRequest<Payment>(`/payments/mpesa-status/${checkoutRequestId}/`, {
+      method: 'GET',
     }),
 
   // Get payment by sale ID
@@ -76,64 +88,9 @@ export const paymentsApi = {
     }),
 };
 
-// Stripe integration helper
-export const stripeApi = {
-  // Initialize Stripe
-  initializeStripe: async () => {
-    if (typeof window !== 'undefined' && !(window as any).Stripe) {
-      const { loadStripe } = await import('@stripe/stripe-js');
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-      return stripe;
-    }
-    return (window as any).Stripe;
-  },
-
-  // Process payment with Stripe Elements
-  processPayment: async (
-    stripe: any,
-    elements: any,
-    clientSecret: string,
-    redirectUrl?: string
-  ): Promise<{ error?: string; paymentIntent?: any }> => {
-    try {
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        return { error: submitError.message };
-      }
-
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        clientSecret,
-        confirmParams: {
-          return_url: redirectUrl || `${window.location.origin}/payment/success`,
-        },
-      });
-
-      if (error) {
-        return { error: error.message };
-      }
-
-      return { paymentIntent };
-    } catch (error: any) {
-      return { error: error.message || 'Payment processing failed' };
-    }
-  },
-
-  // Check payment status
-  checkPaymentStatus: async (stripe: any, paymentIntentId: string) => {
-    try {
-      const { paymentIntent } = await stripe.retrievePaymentIntent(paymentIntentId);
-      return paymentIntent;
-    } catch (error) {
-      console.error('Error retrieving payment intent:', error);
-      return null;
-    }
-  },
-};
-
-// Payment status polling
+// M-Pesa payment status polling
 export async function pollPaymentStatus(
-  saleId: number,
+  checkoutRequestId: string,
   interval = 3000,
   maxAttempts = 20
 ): Promise<Payment> {
@@ -144,10 +101,10 @@ export async function pollPaymentStatus(
       attempts++;
       
       try {
-        const payment = await paymentsApi.getPaymentBySale(saleId);
+        const payment = await paymentsApi.checkPaymentStatus(checkoutRequestId);
         
-        // If payment is succeeded or failed, resolve
-        if (payment.status === 'succeeded' || 
+        // If payment is completed or failed, resolve
+        if (payment.status === 'completed' || 
             payment.status === 'failed' ||
             attempts >= maxAttempts) {
           resolve(payment);

@@ -25,16 +25,16 @@ export default function Cart() {
     }
   };
 
-  const updateQuantity = (inventoryId: string, newQuantity: number) => {
+  const updateQuantity = (productId: number, newQuantity: number) => {
     if (newQuantity < 1) {
-      removeItem(inventoryId);
+      removeItem(productId);
       return;
     }
 
     try {
       setLoading(true);
       // Update cart in localStorage
-      salesApi.updateCartItem(inventoryId, newQuantity);
+      salesApi.updateCartItem(productId, newQuantity);
       fetchCart();
       toast.success('Cart updated');
     } catch (error) {
@@ -45,11 +45,12 @@ export default function Cart() {
     }
   };
 
-  const removeItem = (inventoryId: string) => {
+  // FIX: Changed parameter type from string to number
+  const removeItem = (productId: number) => {
     try {
       setLoading(true);
       // Remove item from localStorage
-      salesApi.removeCartItem(inventoryId);
+      salesApi.removeCartItem(productId);
       fetchCart();
       toast.success('Item removed from cart');
     } catch (error) {
@@ -138,24 +139,31 @@ export default function Cart() {
                       <>
                         <ul className="divide-y divide-gray-200">
                           {cart.map((item: CartItem) => (
-                            <li key={item.inventory_id} className="py-6 flex">
+                            <li key={item.product_id} className="py-6 flex">
                               {/* Item Details */}
                               <div className="flex-1">
                                 <div className="flex justify-between">
                                   <h4 className="text-sm font-medium text-gray-900">
-                                    {item.inventory_name}
+                                    {item.product_name}
+                                    {item.brand_name && (
+                                      <span className="text-gray-500 text-xs ml-2">
+                                        ({item.brand_name})
+                                      </span>
+                                    )}
                                   </h4>
+                                  {/* FIX: Changed total_price to line_total */}
                                   <p className="ml-4 font-bold text-emerald-600">
-                                    KES {item.total_price.toFixed(2)}
+                                    KES {item.line_total.toFixed(2)}
                                   </p>
                                 </div>
+                                {/* FIX: Changed unit to unit_price */}
                                 <p className="mt-1 text-sm text-gray-500">
-                                  KES {item.price_per_unit.toFixed(2)} each
+                                  KES {item.unit_price.toFixed(2)} each
                                 </p>
                                 {/* Quantity Controls */}
                                 <div className="mt-3 flex items-center space-x-3">
                                   <button
-                                    onClick={() => updateQuantity(item.inventory_id, item.quantity - 1)}
+                                    onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
                                     disabled={loading}
                                     className="p-1 rounded-full border border-gray-300 hover:bg-gray-50"
                                   >
@@ -165,14 +173,15 @@ export default function Cart() {
                                     {item.quantity}
                                   </span>
                                   <button
-                                    onClick={() => updateQuantity(item.inventory_id, item.quantity + 1)}
+                                    onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
                                     disabled={loading}
                                     className="p-1 rounded-full border border-gray-300 hover:bg-gray-50"
                                   >
                                     <Plus size={16} />
                                   </button>
+                                  {/* FIX: Removed string conversion */}
                                   <button
-                                    onClick={() => removeItem(item.inventory_id)}
+                                    onClick={() => removeItem(item.product_id)}
                                     disabled={loading}
                                     className="ml-4 p-1 text-red-600 hover:text-red-800"
                                   >

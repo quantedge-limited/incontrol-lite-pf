@@ -47,6 +47,7 @@ export default function SalesDashboard() {
 
   // Fetch data on component mount
   useEffect(() => {
+    // Fix the fetchData function
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -66,17 +67,38 @@ export default function SalesDashboard() {
         ]);
 
         // Extract sales from the response
-        const onlineSales = Array.isArray(salesData) ? salesData : salesData.results || [];
+        const onlineSales = Array.isArray(salesData) ? salesData : (salesData as any).results || [];
         setSales(onlineSales);
-        setPosSales(posSalesData);
-        setInventoryItems(inventoryData);
+        
+        // FIX: Ensure posSalesData is always an array with proper type handling
+        let posSalesArray: any[] = [];
+        
+        if (Array.isArray(posSalesData)) {
+          posSalesArray = posSalesData;
+        } else if (posSalesData && typeof posSalesData === 'object') {
+          // Cast to any to avoid TypeScript errors
+          const posData = posSalesData as any;
+          // If it's an object with a results property, use that
+          if (posData.results && Array.isArray(posData.results)) {
+            posSalesArray = posData.results;
+          } else if (posData.items && Array.isArray(posData.items)) {
+            posSalesArray = posData.items;
+          }
+        }
+        setPosSales(posSalesArray);
+        
+        setInventoryItems(Array.isArray(inventoryData) ? inventoryData : []);
         
         // Calculate stats from combined sales data
-        const calculatedStats = calculateStatsFromSales(onlineSales, posSalesData);
+        const calculatedStats = calculateStatsFromSales(onlineSales, posSalesArray);
         setStats(calculatedStats);
       } catch (error) {
         console.error('Failed to fetch data:', error);
         toast.error('Failed to load sales data');
+        // Ensure arrays are empty on error
+        setSales([]);
+        setPosSales([]);
+        setInventoryItems([]);
       } finally {
         setLoading(false);
       }
@@ -128,7 +150,7 @@ export default function SalesDashboard() {
       total_revenue: totalRevenue,
       total_sales: totalSales,
       recent_sales: recentSales.length,
-      avg_order_value: avgOrderValue,
+      avg_sale_value: avgOrderValue,
       top_products: [],
       low_stock_items: lowStockItems,
       out_of_stock_items: outOfStockItems,
@@ -406,7 +428,7 @@ export default function SalesDashboard() {
                   Avg Order Value
                 </p>
                 <p className="text-xl sm:text-2xl font-bold text-purple-700 mt-1">
-                  KES {stats?.avg_order_value?.toFixed(2) || "0.00"}
+                  KES {stats?.avg_sale_value?.toFixed(2) || "0.00"}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
                   Across all sales

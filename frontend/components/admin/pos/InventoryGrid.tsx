@@ -1,4 +1,4 @@
-// components/admin/pos/InventoryGrid.tsx
+// components/admin/pos/InventoryGrid.tsx - UPDATED
 "use client";
 
 import { motion } from 'framer-motion';
@@ -61,7 +61,9 @@ export default function InventoryGrid({
     if (product.stock_qty <= 0) {
       return { status: 'out-of-stock', label: 'Out of Stock' };
     }
-    if (product.stock_qty <= product.low_stock_threshold) {
+    // Use default threshold since Django doesn't have low_stock_threshold field
+    const lowStockThreshold = 10;
+    if (product.stock_qty <= lowStockThreshold) {
       return { status: 'low-stock', label: 'Low Stock' };
     }
     return { status: 'in-stock', label: 'In Stock' };
@@ -126,11 +128,7 @@ export default function InventoryGrid({
                   <span className="font-bold text-xl text-gray-900">
                     KES {Number(product.selling_price).toLocaleString()}
                   </span>
-                  {product.cost_price && (
-                    <p className="text-xs text-gray-500 line-through mt-0.5">
-                      Cost: KES {Number(product.cost_price).toLocaleString()}
-                    </p>
-                  )}
+                  {/* Remove cost_price display since Django doesn't have it in Product model */}
                 </div>
               </div>
             </div>
@@ -154,19 +152,8 @@ export default function InventoryGrid({
                 </p>
               </div>
 
-              {/* SKU and Barcode */}
-              {(product.sku || product.barcode) && (
-                <div className="flex items-center gap-3 text-xs text-gray-500 mb-3">
-                  {product.sku && (
-                    <span className="bg-gray-100 px-2 py-1 rounded">SKU: {product.sku}</span>
-                  )}
-                  {product.barcode && (
-                    <span className="bg-gray-100 px-2 py-1 rounded">Barcode: {product.barcode}</span>
-                  )}
-                </div>
-              )}
-
-              {/* Category */}
+              {/* Remove SKU and barcode since Django Product model doesn't have them */}
+              {/* Add category if available */}
               {product.category_name && (
                 <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                   <Tag className="h-4 w-4 flex-shrink-0" />
@@ -182,10 +169,10 @@ export default function InventoryGrid({
                     {product.stock_qty.toLocaleString()} units
                   </span>
                 </div>
-                {product.low_stock_threshold && product.stock_qty <= product.low_stock_threshold && product.stock_qty > 0 && (
+                {product.stock_qty <= 10 && product.stock_qty > 0 && (
                   <div className="flex items-center gap-1 mt-1 text-xs text-yellow-600">
                     <AlertCircle className="h-3 w-3" />
-                    <span>Reorder at {product.low_stock_threshold} units</span>
+                    <span>Low stock (reorder suggested)</span>
                   </div>
                 )}
               </div>

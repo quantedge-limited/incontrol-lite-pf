@@ -6,7 +6,7 @@ import { salesApi, CartItem } from '@/lib/api/salesApi';
 import { toast } from 'react-hot-toast';
 
 interface AddToCartButtonProps {
-  productId: string; // Changed from number to string to match inventory_id
+  productId: number; // Changed from number to string to match inventory_id
   productName: string;
   price: number;
   imagePath?: string | null;
@@ -44,11 +44,12 @@ export default function AddToCartButton({
       
       // Create cart item
       const cartItem: CartItem = {
-        inventory_id: inventory_id,
-        inventory_name: productName,
+        product_id: productId, // Convert to number for Django
+        product_name: productName,
+        brand_name: '', // Add empty brand name or get from props
         quantity: 1,
-        price_per_unit: price,
-        total_price: price,
+        unit_price: price,
+        line_total: price,
       };
 
       // Add to cart using localStorage

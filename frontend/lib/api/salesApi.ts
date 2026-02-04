@@ -73,17 +73,19 @@ export interface CartItem {
   line_total: number;
 }
 
-// Stats interface
+// Update the SalesStats interface in salesApi.ts:
 export interface SalesStats {
   total_revenue: number;
   total_sales: number;
   recent_sales: number;
-  avg_sale_value: number;
+  avg_sale_value: number; // Change this to avg_order_value if you prefer
   top_products: Array<{
     name: string;
     total_quantity: number;
     total_revenue: number;
   }>;
+  low_stock_items?: number;  // Optional: for dashboard
+  out_of_stock_items?: number; // Optional: for dashboard
 }
 
 // -------------------

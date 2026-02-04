@@ -1,4 +1,4 @@
-// app/admin/dashboard/pos/page.tsx
+// app/admin/dashboard/pos/page.tsx - UPDATED VERSION
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -10,8 +10,29 @@ import CartSidebar from '@/components/admin/pos/CartSidebar';
 import InventoryGrid from '@/components/admin/pos/InventoryGrid';
 import CheckoutModal from '@/components/admin/pos/CheckoutModal';
 import { inventoryApi, Product } from '@/lib/api/inventoryApi';
-import { salesApi } from '@/lib/api/salesApi';
 import { POSCartItem } from '@/types/pos';
+
+// Direct API call for POS sales (since salesApi might not have createPOSSale yet)
+async function createPOSSale(posSaleData: any) {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
+  const token = localStorage.getItem('access_token');
+  
+  const res = await fetch(`${API_BASE}/pos/pos-transactions/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(posSaleData),
+  });
+  
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.detail || Object.values(error).flat().join(', ') || 'Failed to create POS sale');
+  }
+  
+  return res.json();
+}
 
 export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -37,7 +58,7 @@ export default function POSPage() {
     if (selectedCategory !== 'all' && selectedCategory !== '0') {
       filtered = filtered.filter(product => 
         product.category?.toString() === selectedCategory.toString() || 
-        product.category_id?.toString() === selectedCategory.toString()
+        product.category_name?.toLowerCase() === selectedCategory.toString().toLowerCase()
       );
     }
     
@@ -65,23 +86,21 @@ export default function POSPage() {
       setLoading(true);
       
       // Fetch products
-      const productsResponse = await inventoryApi.getProducts();
-      const productsData = Array.isArray(productsResponse) 
-        ? productsResponse 
-        : productsResponse.results || [];
-      setProducts(productsData);
+      const productsData = await inventoryApi.getProducts();
+      setProducts(Array.isArray(productsData) ? productsData : []);
       
-      // Try to fetch categories, but handle if endpoint doesn't exist
+      // Try to fetch categories
       try {
-        const categoriesData = await inventoryApi.getCategories?.();
-        if (categoriesData) {
-          setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-        }
+        const categoriesData = await inventoryApi.getCategories();
+        setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       } catch (error) {
-        console.log('Categories endpoint not available or failed');
+        console.log('Categories endpoint not available');
         // Extract unique categories from products
         const uniqueCategories = Array.from(
-          new Set(productsData.map(p => p.category_name).filter(Boolean))
+          new Set(productsData
+            .filter(p => p.category_name)
+            .map(p => p.category_name!)
+          )
         ).map((name, index) => ({ id: index + 1, name }));
         setCategories(uniqueCategories);
       }
@@ -89,6 +108,8 @@ export default function POSPage() {
     } catch (error) {
       console.error('Failed to load data:', error);
       toast.error('Failed to load products');
+      setProducts([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
@@ -193,23 +214,23 @@ export default function POSPage() {
     try {
       setCheckoutLoading(true);
       
-      // Prepare items for POS sale
+      // Prepare items for POS sale - MATCH DJANGO SERIALIZER
       const posItems = cart.map(item => ({
-        product: item.product_id,
+        product: item.product_id,  // Django expects product ID (number)
         quantity: item.quantity,
-        unit_price: item.price
+        unit_price: item.price  // Django uses unit_price
       }));
       
-      // Create POS sale data
+      // Create POS sale data - MATCH DJANGO POSSaleSerializer
       const posSaleData = {
         client: customerData.client_id || null, // Optional client ID
         payment_method: customerData.payment_method || 'cash',
-        served_by: 'Admin User', // TODO: Get from auth context
+        served_by: customerData.served_by || 'Admin User',
         items: posItems
       };
       
-      // Call the API to create POS sale
-      const createdSale = await salesApi.createPOSSale(posSaleData);
+      // Call the API to create POS sale - DIRECT API CALL
+      const createdSale = await createPOSSale(posSaleData);
       
       toast.success(`Sale #${createdSale.id} completed successfully!`);
       
@@ -286,7 +307,7 @@ export default function POSPage() {
             subtotal={calculateSubtotal()}
             tax={calculateTax()}
             total={calculateTotal()}
-            servedBy="Admin User" // TODO: Get from auth context
+            servedBy="Admin User"
           />
         )}
       </AnimatePresence>

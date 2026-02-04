@@ -21,6 +21,18 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import InventoryForm from './InventoryForm';
 import { inventoryApi, Product } from '@/lib/api/inventoryApi'; // Use Product type from API
+// Remove: import type { InventoryItem } from './types';
+
+{/*
+  
+  This code defines the main Inventory Dashboard component. It serves as the primary administrative interface for managing your product inventory. It includes features such as:
+
+  - Displaying key inventory statistics (total items, total value, low stock items, etc.)
+  - Filtering and searching inventory items by brand, stock status, and search terms.
+  - Adding, editing, and deleting inventory items via a form component.
+  - Viewing detailed information about each inventory item in a modal.
+  
+  */}
 
 export default function InventoryDashboard() {
   const [inventory, setInventory] = useState<Product[]>([]); // Changed to Product[]

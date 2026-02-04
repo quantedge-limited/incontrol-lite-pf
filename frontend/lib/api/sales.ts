@@ -50,7 +50,7 @@ async function apiRequest<T>(
   requireAuth: boolean = false
 ): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
-
+  
   // Create headers as a plain object
   const headersObj: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -98,17 +98,17 @@ async function apiRequest<T>(
     if (!response.ok) {
       const text = await response.text();
       console.error(`API Error [${response.status}] for ${url}:`, text);
-
+      
       let error: any;
       try {
         error = JSON.parse(text);
       } catch {
         error = { detail: text || `HTTP ${response.status}` };
       }
-
+      
       // More detailed error message
-      const errorMessage = error.detail || error.error || error.message ||
-        (error.errors ? JSON.stringify(error.errors) : `HTTP ${response.status}`);
+      const errorMessage = error.detail || error.error || error.message || 
+                          (error.errors ? JSON.stringify(error.errors) : `HTTP ${response.status}`);
       throw new Error(errorMessage);
     }
 
@@ -123,10 +123,10 @@ async function apiRequest<T>(
 
 // ===== POS API (Admin) =====
 export const posApi = {
-  // Sales - Using correct endpoint /api/pos/pos-transactions/
-  getSales: (params?: {
-    start_date?: string;
-    end_date?: string;
+  // Sales
+  getSales: (params?: { 
+    start_date?: string; 
+    end_date?: string; 
     sale_type?: 'online' | 'walkin';
     page?: number;
     page_size?: number;
@@ -137,48 +137,118 @@ export const posApi = {
     if (params?.sale_type) queryParams.append('sale_type', params.sale_type);
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.page_size) queryParams.append('page_size', params.page_size.toString());
-
+    
     const queryString = queryParams.toString();
-    const url = `/pos/pos-transactions/${queryString ? `?${queryString}` : ''}`;
-
+    const url = `/sales/pos/sales/${queryString ? `?${queryString}` : ''}`;
+    
     return apiRequest<{
-      results: Sale[];
-      count: number;
-      next: string | null;
-      previous: string | null;
-    }>(url, {}, true); // requireAuth: true for admin endpoints
+      sales: Sale[];
+      total: number;
+      page: number;
+      page_size: number;
+      pages: number;
+    }>(url, {}, true); // Add requireAuth: true for admin endpoints
   },
 
   getSale: (saleId: string) =>
-    apiRequest<Sale>(`/pos/pos-transactions/${saleId}/`, {}, true),
+    apiRequest<Sale>(`/sales/pos/sales/${saleId}/`, {}, true),
 
   createSale: (data: {
     client?: number;
-    payment_method: 'cash' | 'card' | 'mobile_money';
-    served_by: string;
+    sale_type?: 'walkin' | 'online';
+    total_amount?: number;
+    notes?: string;
+    buyer_name?: string;
+    buyer_phone?: string;
+    buyer_email?: string;
+    buyer_address?: string;
+    payment_method?: 'cash' | 'mpesa';
     items: {
-      product: number;
+      inventory: number;
       quantity: number;
-      unit_price: number;
+      price_per_unit?: number;
     }[];
-  }) => apiRequest<Sale>('/pos/pos-transactions/', {
+  }) => apiRequest<Sale>('/sales/pos/sales/', {
     method: 'POST',
     body: JSON.stringify(data),
-  }, false), // No auth required for public checkout
+  }, true),
 
-  deleteSale: (saleId: string) =>
-    apiRequest<{ message: string }>(`/pos/pos-transactions/${saleId}/`, {
+  cancelSale: (saleId: string) =>
+    apiRequest<{ message: string }>(`/sales/pos/sales/${saleId}/`, {
       method: 'DELETE',
     }, true),
 };
 
-// ===== CART API (Client-Side Only) =====
-// Cart is now managed in CartContext using localStorage
-// No backend cart endpoints exist
+// ===== CART API (Public) =====
+export const cartApi = {
+  getCart: () =>
+    apiRequest<Cart>('/sales/cart/'), // requireAuth defaults to false
+
+  addToCart: (inventoryId: number, quantity: number = 1) =>
+    apiRequest<Cart>('/sales/cart/', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        inventory_id: inventoryId,
+        quantity 
+      }),
+    }),
+
+  updateCartItem: (itemId: string, quantity: number) =>
+    apiRequest<Cart>(`/sales/cart/items/${itemId}/`, {
+      method: 'PUT',
+      body: JSON.stringify({ quantity }),
+    }),
+
+  removeCartItem: (itemId: string) =>
+    apiRequest<Cart>(`/sales/cart/items/${itemId}/`, {
+      method: 'DELETE',
+    }),
+
+  clearCart: () =>
+    apiRequest<{ message: string }>('/sales/cart/', {
+      method: 'DELETE',
+    }),
+};
 
 // ===== CHECKOUT API =====
-// Checkout now creates POS transactions directly
-// Use posApi.createSale() for checkout
+export const checkoutApi = {
+  checkout: (data: {
+    buyer_name: string;
+    buyer_email: string;
+    buyer_phone: string;
+    buyer_address: string;
+    notes?: string;
+    payment_method: 'mpesa';
+  }) => apiRequest<{
+    success: boolean;
+    order_id: string;
+    order_number: string;
+    total_amount: number;
+    payment_id: string;
+    payment_reference?: string;
+    message: string;
+    payment_response?: any;
+  }>('/sales/checkout/', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  getOrderStatus: (orderId: string) =>
+    apiRequest<{
+      order_id: string;
+      order_number: string;
+      status: string;
+      total_amount: number;
+      created_at: string;
+      items_count: number;
+      buyer_name: string;
+      buyer_phone: string;
+      payment_id?: string;
+      payment_status?: string;
+      payment_method?: string;
+      payment_reference?: string;
+    }>(`/sales/orders/${orderId}/status/`),
+};
 
 // ===== HEALTH CHECK =====
 export const healthApi = {

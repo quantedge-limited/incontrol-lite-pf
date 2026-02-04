@@ -1,4 +1,4 @@
-// app/page.tsx
+// app/page.tsx - FIXED
 "use client";
 
 import { useState } from 'react';
@@ -8,51 +8,54 @@ import { CartSidebar } from '@/components/frontpage/Cart/CartSidebar';
 import { Header } from '@/components/frontpage/Header/Header';
 import { Footer } from '@/components/frontpage/Footer/Footer';
 import { useRouter } from 'next/navigation';
-import { useCart } from '@/context/cart/CartContext';
 
 export default function Home() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const router = useRouter();
-  const { addItem } = useCart();
 
   const handleShopClick = () => {
     router.push('/shop');
   };
 
   const handleCartClick = () => {
-    setIsCartOpen(true);
+    setIsCartOpen(true); // Open cart when cart icon is clicked
   };
 
-  const handleAddToCart = async (product: any) => {
-    try {
-      // Use CartContext to add item with product details
-      await addItem(product.id, 1, {
-        name: product.name,
-        price: product.price,
-        image: product.image
-      });
-
-      // Open cart sidebar
-      setIsCartOpen(true);
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-    }
+  const handleAddToCart = (product: any) => {
+    console.log('Product added to cart:', product);
+    
+    // Get existing cart from localStorage
+    const existingCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    
+    // Add new product
+    const updatedCart = [...existingCart, {
+      ...product,
+      cartQuantity: 1, // Add quantity for cart
+      addedAt: new Date().toISOString()
+    }];
+    
+    // Save back to localStorage
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    
+    // Open cart sidebar and show feedback
+    setIsCartOpen(true);
+    alert(`${product.name} added to cart!`);
   };
 
   const handleCheckout = () => {
-    router.push('/checkout');
+    router.push('/checkout'); // Redirect to checkout page
   };
 
   return (
     <>
       <main className="min-h-screen">
-        <Header onCartClick={handleCartClick} />
+        <Header onCartClick={handleCartClick} /> {/* Add onCartClick here */}
         <Hero onShopClick={handleShopClick} />
         <ProductsList onAddToCart={handleAddToCart} />
-        <CartSidebar
+        <CartSidebar 
           isOpen={isCartOpen}
           onClose={() => setIsCartOpen(false)}
-          onCheckout={handleCheckout}
+          onCheckout={handleCheckout} // Add this prop
         />
       </main>
       <Footer />

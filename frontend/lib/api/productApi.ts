@@ -2,7 +2,7 @@
 import { inventoryApi } from './inventoryApi';
 
 export interface FrontendProduct {
-  id: number;  // Changed from string
+  id: number;
   name: string;
   price: number;
   description?: string;
@@ -52,19 +52,21 @@ export const productApi = {
     search?: string;
   }): Promise<FrontendProduct[]> {
     try {
-      const products = await inventoryApi.getProducts({ is_active: true });
+      // Use the public fetch function instead of inventoryApi.getProducts()
+      const products = await fetchPublicProducts({
+        ...params,
+        is_active: true, // Only get active products for customers
+      });
       
-      return products.map((item) => ({
+      return products.map((item: any) => ({
         id: item.id,
-        name: item.brand_name,
-        price: parseFloat(item.selling_price.toString()),
+        name: item.brand_name || item.product_name,
+        price: parseFloat(item.selling_price?.toString() || '0'),
         description: item.description,
-        quantity: item.stock_qty,
-        image: item.image ? 
-          `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}${item.image}` : 
-          undefined,
+        quantity: item.stock_qty || 0,
+        image: this.getProductImageUrl(item.image),
         category: item.category_name,
-        inStock: item.stock_qty > 0 && item.is_active,
+        inStock: (item.stock_qty || 0) > 0 && item.is_active,
         is_active: item.is_active,
       }));
     } catch (error) {
@@ -75,29 +77,78 @@ export const productApi = {
 
   // Get single product for customers
   async getCustomerProduct(id: number): Promise<FrontendProduct> {
-    const product = await inventoryApi.getProduct(id);
-    
-    return {
-      id: product.id,
-      name: product.brand_name,
-      price: parseFloat(product.selling_price.toString()),
-      description: product.description,
-      quantity: product.stock_qty,
-      image: product.image ? 
-        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}${product.image}` : 
-        undefined,
-      category: product.category_name,
-      inStock: product.stock_qty > 0 && product.is_active,
-      is_active: product.is_active,
-    };
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
+      const res = await fetch(`${API_BASE}/inventory/products/${id}/`, {
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error('Product not found');
+      }
+      
+      const product = await res.json();
+      
+      return {
+        id: product.id,
+        name: product.brand_name || product.product_name,
+        price: parseFloat(product.selling_price?.toString() || '0'),
+        description: product.description,
+        quantity: product.stock_qty || 0,
+        image: this.getProductImageUrl(product.image),
+        category: product.category_name,
+        inStock: (product.stock_qty || 0) > 0 && product.is_active,
+        is_active: product.is_active,
+      };
+    } catch (error) {
+      console.error('Failed to fetch product:', error);
+      throw error;
+    }
   },
 
-  // Get products for admin (use inventoryApi instead)
+  // Helper to build image URL
+  getProductImageUrl(imagePath?: string): string | undefined {
+    if (!imagePath) return undefined;
+    
+    // If already a full URL, return as is
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
+    // Otherwise, construct full URL
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com';
+    return `${baseUrl}${imagePath}`;
+  },
+
+  // Get categories for customers (public endpoint)
+  async getCustomerCategories(): Promise<any[]> {
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://incontrol-lite-pb.onrender.com/api';
+      const res = await fetch(`${API_BASE}/inventory/categories/`, {
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to fetch categories');
+      }
+      
+      return res.json();
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+      return [];
+    }
+  },
+
+  // Get products for admin (requires auth - uses inventoryApi)
   async list() {
     return inventoryApi.getProducts();
   },
 
-  // Get single product for admin
+  // Get single product for admin (requires auth)
   async get(id: number) {
     return inventoryApi.getProduct(id);
   },

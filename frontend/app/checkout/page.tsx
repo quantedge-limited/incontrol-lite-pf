@@ -1,63 +1,66 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCart } from '@/context/cart/CartContext';
-import { posApi } from '@/lib/api/sales';
+import { salesApi, CreateSaleDto } from '@/lib/api/salesApi';
 import { toast } from 'react-toastify';
+import { useCart } from '@/context/cart/CartContext'; // Add CartContext import
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, getCartTotal, clearCart: clearContextCart } = useCart(); // Get items from CartContext
   const [loading, setLoading] = useState(false);
-  const { items: cart, clearCart } = useCart();
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
-    customer_name: '',
-    customer_email: '',
-    customer_phone: '',
+    customer_name: '', 
+    customer_email: '', 
+    customer_phone: '', 
+    shipping_address: '',
     notes: '',
   });
 
+  useEffect(() => {
+    // Check if cart is empty using CartContext items
+    if (items.length === 0) {
+      toast.error('Your cart is empty');
+      router.push('/');
+    }
+  }, [items, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (cart.length === 0) {
-      toast.error('Your cart is empty');
-      return;
-    }
-
-    if (!formData.customer_name || !formData.customer_phone) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
+    setLoading(true);
+    setError('');
 
     try {
-      setLoading(true);
-
-      // Transform cart to POS transaction format
-      const posData = {
-        payment_method: 'cash' as const, // Default to cash, can be changed to support other methods
-        served_by: `Online - ${formData.customer_name}`,
-        items: cart.map(item => ({
-          product: item.inventory_id,
+      // For now, we'll create a mock client ID since we don't have client management
+      // In production, you would create a client first or get existing client ID
+      const mockClientId = 1; // TODO: Replace with actual client ID from your system
+      
+      // Transform cart items to match Django CreateSaleDto
+      const saleData: CreateSaleDto = {
+        client: mockClientId,
+        shipping_address: formData.shipping_address || 'Not provided',
+        items: items.map(item => ({
+          product: item.product_id,
           quantity: item.quantity,
-          unit_price: item.price_per_unit
-        }))
+          price_at_sale: item.unit_price,
+        })),
       };
 
-      // Create POS transaction
-      const transaction = await posApi.createSale(posData);
-
+      const order = await salesApi.createSale(saleData);
       toast.success('Order placed successfully!');
-
-      // Clear cart after successful order
-      await clearCart();
-
-      // Redirect to success page or home
-      router.push(`/?order_success=true&order_id=${transaction.id}`);
-    } catch (error: any) {
-      toast.error(error.message || 'Checkout failed');
-      console.error(error);
+      
+      // Clear cart from both context and localStorage
+      clearContextCart();
+      salesApi.clearCart(); // Also clear from localStorage to be safe
+      router.push(`/order-confirmation/${order.id}`);
+      
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to place order';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Checkout error:', err);
     } finally {
       setLoading(false);
     }
@@ -92,38 +95,41 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
-
+        
+        {/* Error message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Order Summary */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h2>
-
-              {cart.length === 0 ? (
-                <p className="text-gray-500">Your cart is empty</p>
-              ) : (
-                <div className="space-y-4">
-                  {cart.map((item) => (
-                    <div key={item.inventory_id} className="flex justify-between items-center py-3 border-b">
-                      <div>
-                        <p className="font-medium">{item.inventory_name}</p>
-                        <p className="text-sm text-gray-600">
-                          {item.quantity} x KES {item.price_per_unit.toFixed(2)}
-                        </p>
-                      </div>
-                      <p className="font-bold">
-                        KES {(item.quantity * item.price_per_unit).toFixed(2)}
+              
+              <div className="space-y-4">
+                {items.map((item) => (
+                  <div key={item.product_id} className="flex justify-between items-center py-3 border-b">
+                    <div>
+                      <p className="font-medium">{item.product_name}</p>
+                      <p className="text-sm text-gray-600">
+                        {item.quantity} x KES {item.unit_price.toFixed(0)} {/* Changed toFixed(2) to toFixed(0) */}
                       </p>
                     </div>
-                  ))}
-
-                  <div className="pt-4 border-t">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total</span>
-                      <span className="text-emerald-700">
-                        KES {cartTotal.toFixed(2)}
-                      </span>
-                    </div>
+                    <p className="font-bold">
+                      KES {item.line_total.toFixed(0)} {/* Changed toFixed(2) to toFixed(0) */}
+                    </p>
+                  </div>
+                ))}
+                
+                <div className="pt-4 border-t">
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span className="text-emerald-700">
+                      KES {cartTotal.toFixed(0)} {/* Changed toFixed(2) to toFixed(0) */}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -132,7 +138,7 @@ export default function CheckoutPage() {
             {/* Customer Information Form */}
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Customer Information</h2>
-
+              
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -225,7 +231,7 @@ export default function CheckoutPage() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Order Total</h3>
-
+              
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>

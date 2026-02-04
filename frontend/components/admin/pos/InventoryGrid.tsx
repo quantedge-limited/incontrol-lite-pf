@@ -1,4 +1,4 @@
-// components/admin/pos/InventoryGrid.tsx - UPDATED
+// components/admin/pos/InventoryGrid.tsx - REDESIGNED (No gradient, shorter)
 "use client";
 
 import { motion } from 'framer-motion';
@@ -23,19 +23,23 @@ export default function InventoryGrid({
 
   if (loading) {
     return (
-      <div className="col-span-full py-12 flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
-        <p className="mt-4 text-gray-600">Loading products...</p>
+      <div className="col-span-full py-20 flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-14 w-14 border-[3px] border-emerald-500 border-t-transparent"></div>
+        <p className="mt-5 text-gray-600 font-medium">Loading inventory...</p>
       </div>
     );
   }
 
   if (products.length === 0) {
     return (
-      <div className="col-span-full py-12 flex flex-col items-center justify-center">
-        <Package className="h-16 w-16 text-gray-400" />
-        <p className="mt-4 text-gray-600 text-lg">No products available</p>
-        <p className="text-gray-500">Add products to inventory or check filters</p>
+      <div className="col-span-full py-20 flex flex-col items-center justify-center text-center">
+        <div className="h-24 w-24 bg-gray-100 rounded-2xl flex items-center justify-center mb-6">
+          <Package className="h-12 w-12 text-gray-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
+        <p className="text-gray-500 max-w-md">
+          Add products to your inventory or check your filters
+        </p>
       </div>
     );
   }
@@ -61,7 +65,6 @@ export default function InventoryGrid({
     if (product.stock_qty <= 0) {
       return { status: 'out-of-stock', label: 'Out of Stock' };
     }
-    // Use default threshold since Django doesn't have low_stock_threshold field
     const lowStockThreshold = 10;
     if (product.stock_qty <= lowStockThreshold) {
       return { status: 'low-stock', label: 'Low Stock' };
@@ -72,11 +75,11 @@ export default function InventoryGrid({
   const getStockStatusColor = (status: string) => {
     switch (status) {
       case 'out-of-stock':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-50 text-red-700 border border-red-200';
       case 'low-stock':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-50 text-amber-700 border border-amber-200';
       default:
-        return 'bg-emerald-100 text-emerald-800';
+        return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
     }
   };
 
@@ -94,157 +97,162 @@ export default function InventoryGrid({
         return (
           <motion.div
             key={product.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.03, duration: 0.3 }}
+            className="group relative"
           >
-            {/* Product Image */}
-            <div className="relative aspect-square rounded-t-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
-              {imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={imageUrl}
-                  alt={product.product_name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/images/product-placeholder.jpg';
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Package className="h-20 w-20 text-gray-300 group-hover:text-gray-400 transition-colors" />
+            <div className="bg-white rounded-xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5">
+              {/* Product Image Container - Reduced height */}
+              <div className="relative h-48 bg-gradient-to-br from-gray-50 to-gray-100">
+                {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={imageUrl}
+                    alt={product.product_name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/images/product-placeholder.jpg';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="h-14 w-14 text-gray-300" />
+                  </div>
+                )}
+                
+                {/* Price Tag - Smaller */}
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3">
+                  <div className="text-white">
+                    <div className="text-xs font-medium opacity-90">Price</div>
+                    <div className="text-xl font-bold">
+                      KES {Number(product.selling_price).toLocaleString()}
+                    </div>
+                  </div>
                 </div>
-              )}
-              
-              {/* Stock Badge */}
-              <div className={`absolute top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold ${getStockStatusColor(stockStatus.status)}`}>
-                {stockStatus.label}
+
+                {/* Stock Status Badge - Smaller */}
+                <div className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold ${getStockStatusColor(stockStatus.status)}`}>
+                  {stockStatus.label}
+                </div>
               </div>
 
-              {/* Price Badge */}
-              <div className="absolute bottom-3 left-3">
-                <div className="bg-white/95 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg">
-                  <span className="font-bold text-xl text-gray-900">
-                    KES {Number(product.selling_price).toLocaleString()}
-                  </span>
-                  {/* Remove cost_price display since Django doesn't have it in Product model */}
-                </div>
-              </div>
-            </div>
-
-            {/* Product Info */}
-            <div className="p-4">
-              {/* Brand and Product Name */}
-              <div className="mb-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-lg text-gray-900 truncate">
-                    {product.brand_name}
-                  </h3>
-                  {!product.is_active && (
-                    <span className="px-2 py-0.5 text-xs bg-gray-200 text-gray-700 rounded">
-                      Inactive
-                    </span>
+              {/* Product Info - Reduced padding */}
+              <div className="p-4">
+                {/* Product Name & Brand */}
+                <div className="mb-3">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-gray-900 truncate text-sm">
+                          {product.brand_name}
+                        </h3>
+                        {!product.is_active && (
+                          <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-0.5 line-clamp-2 text-xs">
+                        {product.product_name}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Category - Smaller */}
+                  {product.category_name && (
+                    <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs mt-1">
+                      <Tag className="h-2.5 w-2.5" />
+                      {product.category_name}
+                    </div>
                   )}
                 </div>
-                <p className="text-sm text-gray-600 line-clamp-2 min-h-[40px]">
-                  {product.product_name}
-                </p>
-              </div>
 
-              {/* Remove SKU and barcode since Django Product model doesn't have them */}
-              {/* Add category if available */}
-              {product.category_name && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                  <Tag className="h-4 w-4 flex-shrink-0" />
-                  <span className="truncate">{product.category_name}</span>
-                </div>
-              )}
-
-              {/* Stock Info */}
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">Available:</span>
-                  <span className={`font-semibold ${product.stock_qty <= 0 ? 'text-red-600' : product.stock_qty <= 10 ? 'text-yellow-600' : 'text-emerald-600'}`}>
-                    {product.stock_qty.toLocaleString()} units
-                  </span>
-                </div>
-                {product.stock_qty <= 10 && product.stock_qty > 0 && (
-                  <div className="flex items-center gap-1 mt-1 text-xs text-yellow-600">
-                    <AlertCircle className="h-3 w-3" />
-                    <span>Low stock (reorder suggested)</span>
+                {/* Stock Information - Smaller */}
+                <div className="mb-4 p-2.5 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-xs text-gray-600">Available Stock</span>
+                    <span className={`font-semibold text-sm ${product.stock_qty <= 0 ? 'text-red-600' : product.stock_qty <= 10 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {product.stock_qty.toLocaleString()} units
+                    </span>
                   </div>
-                )}
-              </div>
+                  {product.stock_qty <= 10 && product.stock_qty > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1.5 text-xs text-amber-600">
+                      <AlertCircle className="h-3 w-3" />
+                      <span className="text-xs">Running low</span>
+                    </div>
+                  )}
+                </div>
 
-              {/* Add to Cart Section */}
-              <div className="space-y-3">
-                {quickAddEnabled && (
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden">
+                {/* Add to Cart Section */}
+                <div className="space-y-2.5">
+                  {quickAddEnabled && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden">
+                        <button
+                          onClick={() => handleQuantityChange(product.id, String(Math.max(1, quickAddQty - 1)))}
+                          className="p-2 hover:bg-gray-50 transition-colors"
+                          disabled={product.stock_qty === 0 || !product.is_active}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20 12H4" />
+                          </svg>
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          max={product.stock_qty}
+                          value={quickAddQty}
+                          onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                          className="w-12 text-center font-semibold border-x border-gray-200 py-1.5 bg-white text-sm"
+                          disabled={product.stock_qty === 0 || !product.is_active}
+                        />
+                        <button
+                          onClick={() => handleQuantityChange(product.id, String(Math.min(product.stock_qty, quickAddQty + 1)))}
+                          className="p-2 hover:bg-gray-50 transition-colors"
+                          disabled={product.stock_qty === 0 || !product.is_active || quickAddQty >= product.stock_qty}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                          </svg>
+                        </button>
+                      </div>
+                      
                       <button
-                        onClick={() => handleQuantityChange(product.id, String(Math.max(1, quickAddQty - 1)))}
-                        className="p-2 hover:bg-gray-100 transition-colors"
+                        onClick={() => handleQuickAdd(product)}
                         disabled={product.stock_qty === 0 || !product.is_active}
+                        className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all text-sm ${
+                          product.stock_qty === 0 || !product.is_active
+                            ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        }`}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
-                        </svg>
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        max={product.stock_qty}
-                        value={quickAddQty}
-                        onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                        className="w-16 text-center text-sm font-semibold border-x border-gray-300 py-2 bg-white"
-                        disabled={product.stock_qty === 0 || !product.is_active}
-                      />
-                      <button
-                        onClick={() => handleQuantityChange(product.id, String(Math.min(product.stock_qty, quickAddQty + 1)))}
-                        className="p-2 hover:bg-gray-100 transition-colors"
-                        disabled={product.stock_qty === 0 || !product.is_active || quickAddQty >= product.stock_qty}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                        </svg>
+                        <Plus className="h-3.5 w-3.5" />
+                        Add
                       </button>
                     </div>
-                    
-                    <button
-                      onClick={() => handleQuickAdd(product)}
-                      disabled={product.stock_qty === 0 || !product.is_active}
-                      className={`px-4 py-2.5 rounded-lg font-medium flex items-center gap-2 transition-all ${
-                        product.stock_qty === 0 || !product.is_active
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      }`}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add
-                    </button>
-                  </div>
-                )}
+                  )}
 
-                {/* Standard Add to Cart Button */}
-                <button
-                  onClick={() => onAddToCart(product, quickAddEnabled ? 1 : undefined)}
-                  disabled={product.stock_qty === 0 || !product.is_active}
-                  className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
-                    product.stock_qty === 0 || !product.is_active
-                      ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-600 to-emerald-600 text-white hover:from-blue-700 hover:to-emerald-700 shadow-md hover:shadow-lg'
-                  }`}
-                >
-                  <ShoppingBag className="h-5 w-5" />
-                  {product.stock_qty === 0 
-                    ? 'Out of Stock' 
-                    : !product.is_active 
-                      ? 'Product Inactive'
-                      : quickAddEnabled 
-                        ? 'Add 1 to Cart' 
-                        : 'Add to Cart'}
-                </button>
+                  {/* Primary Add to Cart Button - No gradient, solid green */}
+                  <button
+                    onClick={() => onAddToCart(product, quickAddEnabled ? 1 : undefined)}
+                    disabled={product.stock_qty === 0 || !product.is_active}
+                    className={`w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all text-sm ${
+                      product.stock_qty === 0 || !product.is_active
+                        ? 'bg-gray-100 text-gray-500 cursor-not-allowed border border-gray-200'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm hover:shadow active:scale-[0.98]'
+                    }`}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    {product.stock_qty === 0 
+                      ? 'Out of Stock' 
+                      : !product.is_active 
+                        ? 'Product Inactive'
+                        : quickAddEnabled 
+                          ? 'Add 1 to Cart' 
+                          : 'Add to Cart'}
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>

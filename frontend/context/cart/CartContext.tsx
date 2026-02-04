@@ -1,97 +1,93 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { cartApi } from '@/lib/api/sales';
 import { toast } from 'react-toastify';
 
-{/*
-  
-  CartContext provides a context for managing the shopping cart state.
-   It includes functions to add, update, remove items, clear the cart, 
-   and refresh the cart data from the backend API. It also handles loading and error states, 
-   and provides user feedback via toast notifications.
-
-*/}
-
-// Define the cart structure
+// Use the CartItem interface from salesApi.ts
 export interface CartItem {
-  id: string;
-  inventory_id: number;
-  inventory_name: string;
+  product_id: number;
+  product_name: string;
+  brand_name: string;
   quantity: number;
-  price_per_unit: number;
-  total_price: number;
-  image_path?: string;
-  image?: string; 
-  image_url?: string; 
-}
-
-export interface Cart {
-  id: string;
-  session_id: string;
-  items: CartItem[];
-  total_price: number;
-  created_at: string;
-  updated_at: string;
+  unit_price: number;
+  line_total: number;
+  image_path?: string; // Optional for UI
+  cartItemId?: string; // Add this for unique IDs in cart
 }
 
 interface CartContextType {
-  cart: Cart;
+  cart: CartItem[];
   loading: boolean;
-  isLoading?: boolean; // Optional alias for loading
+  isLoading?: boolean;
   error: string | null;
   items: CartItem[];
-  cartCount: number; // Add this
+  cartCount: number;
   
-  addItem: (inventoryId: number, quantity?: number) => Promise<void>;
-  updateItem: (itemId: string, quantity: number) => Promise<void>;
-  removeItem: (itemId: string) => Promise<void>;
-  clearCart: () => Promise<void>;
-  refreshCart: () => Promise<void>;
+  addItem: (item: Omit<CartItem, 'line_total' | 'cartItemId'>) => void;
+  updateItem: (productId: number, quantity: number) => void;
+  removeItem: (productId: number) => void;
+  clearCart: () => void;
+  getCartTotal: () => number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Default empty cart
-const defaultCart: Cart = {
-  id: '',
-  session_id: '',
-  items: [],
-  total_price: 0,
-  created_at: '',
-  updated_at: ''
-};
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<Cart>(defaultCart);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Calculate cart count from items
-  const cartCount = cart.items.reduce((total, item) => total + item.quantity, 0);
-
-  const refreshCart = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const cartData = await cartApi.getCart();
-      setCart(cartData);
-    } catch (err: any) {
-      setError(err.message);
-      // Set default cart if error
-      setCart(defaultCart);
-      console.error('Failed to load cart:', err);
-    } finally {
-      setLoading(false);
-    }
+  // Initialize cart from localStorage
+  useEffect(() => {
+    const loadCart = () => {
+      try {
+        const savedCart = localStorage.getItem('cart');
+        if (savedCart) {
+          setCart(JSON.parse(savedCart));
+        }
+      } catch (err) {
+        console.error('Failed to load cart from storage:', err);
+      }
+    };
+    
+    loadCart();
   }, []);
 
-  const addItem = useCallback(async (inventoryId: number, quantity: number = 1) => {
+  // Calculate cart count
+  const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    }
+  }, [cart]);
+
+  const addItem = useCallback((item: Omit<CartItem, 'line_total' | 'cartItemId'>) => {
     setLoading(true);
     setError(null);
     try {
-      await cartApi.addToCart(inventoryId, quantity);
-      await refreshCart();
+      const existingItemIndex = cart.findIndex(
+        (ci) => ci.product_id === item.product_id
+      );
+
+      if (existingItemIndex >= 0) {
+        // Update existing item
+        const updatedCart = [...cart];
+        updatedCart[existingItemIndex].quantity += item.quantity;
+        updatedCart[existingItemIndex].line_total = 
+          updatedCart[existingItemIndex].quantity * updatedCart[existingItemIndex].unit_price;
+        setCart(updatedCart);
+      } else {
+        // Add new item with unique ID
+        const newItem: CartItem = {
+          ...item,
+          cartItemId: `${item.product_id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Add unique ID
+          line_total: item.quantity * item.unit_price
+        };
+        setCart([...cart, newItem]);
+      }
+      
       toast.success('Item added to cart');
     } catch (err: any) {
       setError(err.message);
@@ -100,15 +96,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, [cart]);
 
-  const updateItem = useCallback(async (itemId: string, quantity: number) => {
+  const updateItem = useCallback((productId: number, quantity: number) => {
     setLoading(true);
     setError(null);
     try {
-      await cartApi.updateCartItem(itemId, quantity);
-      await refreshCart();
-      toast.success('Cart updated');
+      const itemIndex = cart.findIndex((ci) => ci.product_id === productId);
+
+      if (itemIndex >= 0) {
+        const updatedCart = [...cart];
+        
+        if (quantity <= 0) {
+          // Remove item if quantity is 0 or less
+          updatedCart.splice(itemIndex, 1);
+        } else {
+          // Update quantity
+          updatedCart[itemIndex].quantity = quantity;
+          updatedCart[itemIndex].line_total = quantity * updatedCart[itemIndex].unit_price;
+        }
+        
+        setCart(updatedCart);
+        toast.success('Cart updated');
+      }
     } catch (err: any) {
       setError(err.message);
       toast.error(`Failed to update item: ${err.message}`);
@@ -116,14 +126,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, [cart]);
 
-  const removeItem = useCallback(async (itemId: string) => {
+  const removeItem = useCallback((productId: number) => {
     setLoading(true);
     setError(null);
     try {
-      await cartApi.removeCartItem(itemId);
-      await refreshCart();
+      const filteredCart = cart.filter((ci) => ci.product_id !== productId);
+      setCart(filteredCart);
       toast.success('Item removed from cart');
     } catch (err: any) {
       setError(err.message);
@@ -132,14 +142,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, [cart]);
 
-  const clearCart = useCallback(async () => {
+  const clearCart = useCallback(() => {
     setLoading(true);
     setError(null);
     try {
-      await cartApi.clearCart();
-      await refreshCart();
+      setCart([]);
       toast.success('Cart cleared');
     } catch (err: any) {
       setError(err.message);
@@ -148,26 +157,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshCart]);
+  }, []);
 
-  // Initialize cart on mount
-  useEffect(() => {
-    refreshCart();
-  }, [refreshCart]);
+  const getCartTotal = useCallback(() => {
+    return cart.reduce((total, item) => total + item.line_total, 0);
+  }, [cart]);
 
   return (
     <CartContext.Provider value={{
       cart,
-      items: cart.items,
+      items: cart,
       loading,
-      isLoading: loading, // Provide both for compatibility
+      isLoading: loading,
       error,
-      cartCount, // Add this
+      cartCount,
       addItem,
       updateItem,
       removeItem,
       clearCart,
-      refreshCart,
+      getCartTotal,
     }}>
       {children}
     </CartContext.Provider>

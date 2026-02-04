@@ -252,7 +252,6 @@ export const ProductsList: React.FC<ProductsListProps> = ({ onAddToCart }) => {
                     image={product.image}
                     category={product.category}
                     is_active={product.is_active}
-                    onAddToCart={handleProductAddToCart}
                   />
                 ))}
               </div>

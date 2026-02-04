@@ -8,18 +8,24 @@ import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
   const router = useRouter();
-  const { cart, items, loading: isLoading, removeItem: removeFromCart, updateItem: updateQuantity, clearCart } = useCart();
+  const { 
+    items, 
+    loading: isLoading, 
+    removeItem, 
+    updateItem, 
+    clearCart,
+    getCartTotal 
+  } = useCart();
+  
   const [checkoutLoading, setCheckoutLoading] = useState(false);
 
-  // Use cart.total_price instead of trying to destructure totalPrice
-  const totalPrice = cart.total_price;
+  const totalPrice = getCartTotal();
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
     
     setCheckoutLoading(true);
     try {
-      // Redirect to checkout page
       router.push('/checkout');
     } catch (error) {
       console.error('Checkout error:', error);
@@ -73,10 +79,21 @@ export default function CartPage() {
                 <div className="flow-root">
                   <ul className="divide-y divide-gray-200">
                     {items.map((item) => (
-                      <li key={item.id} className="py-6 flex">
-                        {/* Product Image - Note: CartItem doesn't have image_path, might need adjustment */}
-                        <div className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-md flex items-center justify-center">
-                          <ShoppingBag className="h-12 w-12 text-gray-400" />
+                      <li key={item.product_id} className="py-6 flex">
+                        {/* Product Image */}
+                        <div className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-md flex items-center justify-center overflow-hidden">
+                          {item.image_path ? (
+                            <img 
+                              src={item.image_path.startsWith('http') ? item.image_path : `/images/products/${item.image_path}`}
+                              alt={item.product_name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.src = '/images/placeholder.jpg';
+                              }}
+                            />
+                          ) : (
+                            <ShoppingBag className="h-12 w-12 text-gray-400" />
+                          )}
                         </div>
 
                         {/* Product Details */}
@@ -84,21 +101,24 @@ export default function CartPage() {
                           <div className="flex items-start justify-between">
                             <div>
                               <h3 className="text-sm font-medium text-gray-900">
-                                {item.inventory_name}
+                                {item.product_name}
                               </h3>
                               <p className="mt-1 text-sm text-gray-500">
-                                KES {item.price_per_unit.toFixed(2)} each
+                                Brand: {item.brand_name}
+                              </p>
+                              <p className="mt-1 text-sm text-gray-500">
+                                KES {item.unit_price.toFixed(0)} each
                               </p>
                             </div>
                             <p className="text-sm font-medium text-gray-900">
-                              KES {item.total_price.toFixed(2)}
+                              KES {item.line_total.toFixed(0)}
                             </p>
                           </div>
 
                           {/* Quantity Controls */}
                           <div className="mt-3 flex items-center space-x-3">
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              onClick={() => updateItem(item.product_id, item.quantity - 1)}
                               disabled={isLoading || item.quantity <= 1}
                               className="p-1 rounded-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
@@ -108,14 +128,14 @@ export default function CartPage() {
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              onClick={() => updateItem(item.product_id, item.quantity + 1)}
                               disabled={isLoading}
                               className="p-1 rounded-full border border-gray-300 hover:bg-gray-50"
                             >
                               <Plus size={16} />
                             </button>
                             <button
-                              onClick={() => removeFromCart(item.id)}
+                              onClick={() => removeItem(item.product_id)}
                               disabled={isLoading}
                               className="ml-4 p-1 text-red-600 hover:text-red-800"
                             >
@@ -153,7 +173,7 @@ export default function CartPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">
-                    KES {totalPrice.toFixed(2)}
+                    KES {totalPrice.toFixed(0)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -164,7 +184,7 @@ export default function CartPage() {
                   <div className="flex justify-between">
                     <span className="text-lg font-bold text-gray-900">Total</span>
                     <span className="text-lg font-bold text-emerald-700">
-                      KES {totalPrice.toFixed(2)}
+                      KES {totalPrice.toFixed(0)}
                     </span>
                   </div>
                 </div>

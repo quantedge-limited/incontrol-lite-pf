@@ -27,7 +27,7 @@ interface FormData {
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
-  const { cart, items, clearCart } = useCart();
+  const { items, clearCart, getCartTotal } = useCart(); // Added getCartTotal
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
@@ -65,6 +65,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
   }
 
   const safeCartItems = items || [];
+  const cartTotal = getCartTotal(); // Calculate total
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -174,7 +175,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
         // Mock order creation (replace with real API later)
         const mockOrderResponse = {
           order_id: `ORD-${Date.now()}`,
-          total_amount: cart.total_price,
+          total_amount: cartTotal, // Use cartTotal instead of cart.total_price
           message: 'Order created successfully',
           customer: {
             name: formData.firstName + ' ' + formData.lastName,
@@ -211,8 +212,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
       }
     }
   };
-
-
 
   const resetForm = () => {
     setStep(1);
@@ -279,7 +278,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                 {orderData && (
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                     <p className="text-sm text-gray-600">
-                      Order #{orderData.order_id?.slice(0, 8)} • Total: KES {cart.total_price.toFixed(0)}
+                      Order #{orderData.order_id?.slice(0, 8)} • Total: KES {cartTotal.toFixed(0)} {/* Use cartTotal */}
                     </p>
                   </div>
                 )}
@@ -298,7 +297,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                   Please check your phone to complete the M-Pesa payment.
                 </p>
                 <p className="text-sm text-gray-500 mb-6">
-                  Order #{orderData?.order_id?.slice(0, 8)} • KES {cart.total_price.toFixed(0)}
+                  Order #{orderData?.order_id?.slice(0, 8)} • KES {cartTotal.toFixed(0)} {/* Use cartTotal */}
                 </p>
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mb-6">
                   <p className="text-sm text-yellow-700">
@@ -415,7 +414,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose })
                             </div>
                             <div className="flex justify-between font-bold">
                               <span>Total:</span>
-                              <span>KES {cart.total_price.toFixed(0)}</span>
+                              <span>KES {cartTotal.toFixed(0)}</span> {/* Use cartTotal */}
                             </div>
                           </div>
                         </div>

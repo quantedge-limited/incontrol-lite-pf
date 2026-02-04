@@ -2,42 +2,30 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { salesApi, CreateSaleDto } from '@/lib/api/salesApi'; // Add CreateSaleDto import
+import { salesApi, CreateSaleDto } from '@/lib/api/salesApi';
 import { toast } from 'react-toastify';
-import type { CartItem } from '@/lib/api/salesApi';
+import { useCart } from '@/context/cart/CartContext'; // Add CartContext import
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const { items, getCartTotal, clearCart: clearContextCart } = useCart(); // Get items from CartContext
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(''); // Add this line
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     customer_name: '', 
     customer_email: '', 
     customer_phone: '', 
-    shipping_address: '', // Add this field for Django
+    shipping_address: '',
     notes: '',
   });
 
   useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const fetchCart = () => {
-    try {
-      // Use local storage cart instead of API call
-      const cartData = salesApi.getCartFromStorage();
-      setCart(cartData);
-      if (cartData.length === 0) {
-        toast.error('Your cart is empty');
-        router.push('/');
-      }
-    } catch (error) {
-      console.error('Failed to fetch cart:', error);
-      toast.error('Failed to load cart');
+    // Check if cart is empty using CartContext items
+    if (items.length === 0) {
+      toast.error('Your cart is empty');
       router.push('/');
     }
-  };
+  }, [items, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,11 +37,11 @@ export default function CheckoutPage() {
       // In production, you would create a client first or get existing client ID
       const mockClientId = 1; // TODO: Replace with actual client ID from your system
       
-      // Transform cart to match Django CreateSaleDto
+      // Transform cart items to match Django CreateSaleDto
       const saleData: CreateSaleDto = {
-        client: mockClientId, // Use mock client ID for now
-        shipping_address: formData.shipping_address || 'Not provided', // Required by Django
-        items: cart.map(item => ({
+        client: mockClientId,
+        shipping_address: formData.shipping_address || 'Not provided',
+        items: items.map(item => ({
           product: item.product_id,
           quantity: item.quantity,
           price_at_sale: item.unit_price,
@@ -63,8 +51,9 @@ export default function CheckoutPage() {
       const order = await salesApi.createSale(saleData);
       toast.success('Order placed successfully!');
       
-      // Clear cart and redirect
-      salesApi.clearCart();
+      // Clear cart from both context and localStorage
+      clearContextCart();
+      salesApi.clearCart(); // Also clear from localStorage to be safe
       router.push(`/order-confirmation/${order.id}`);
       
     } catch (err) {
@@ -86,10 +75,10 @@ export default function CheckoutPage() {
   };
 
   const calculateTotal = () => {
-    return cart.reduce((total, item) => total + item.line_total, 0); // Changed from total_price to line_total
+    return getCartTotal(); // Use the function from CartContext
   };
 
-  if (cart.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -121,16 +110,16 @@ export default function CheckoutPage() {
               <h2 className="text-lg font-medium text-gray-900 mb-4">Order Summary</h2>
               
               <div className="space-y-4">
-                {cart.map((item) => (
+                {items.map((item) => (
                   <div key={item.product_id} className="flex justify-between items-center py-3 border-b">
                     <div>
                       <p className="font-medium">{item.product_name}</p>
                       <p className="text-sm text-gray-600">
-                        {item.quantity} x KES {item.unit_price.toFixed(2)}
+                        {item.quantity} x KES {item.unit_price.toFixed(0)} {/* Changed toFixed(2) to toFixed(0) */}
                       </p>
                     </div>
                     <p className="font-bold">
-                      KES {item.line_total.toFixed(2)}
+                      KES {item.line_total.toFixed(0)} {/* Changed toFixed(2) to toFixed(0) */}
                     </p>
                   </div>
                 ))}
@@ -139,7 +128,7 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
                     <span className="text-emerald-700">
-                      KES {cartTotal.toFixed(2)}
+                      KES {cartTotal.toFixed(0)} {/* Changed toFixed(2) to toFixed(0) */}
                     </span>
                   </div>
                 </div>
@@ -202,7 +191,7 @@ export default function CheckoutPage() {
                   </label>
                   <input
                     type="text"
-                    name="shipping_address" // Add this field for Django
+                    name="shipping_address"
                     value={formData.shipping_address}
                     onChange={handleChange}
                     required
@@ -228,7 +217,7 @@ export default function CheckoutPage() {
                 <div className="pt-6 border-t border-gray-200">
                   <button
                     type="submit"
-                    disabled={loading || cart.length === 0}
+                    disabled={loading || items.length === 0}
                     className="w-full bg-emerald-600 text-white py-3 px-4 rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Processing...' : 'Place Order'}
@@ -246,7 +235,7 @@ export default function CheckoutPage() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span>KES {cartTotal.toFixed(2)}</span>
+                  <span>KES {cartTotal.toFixed(0)}</span> {/* Changed toFixed(2) to toFixed(0) */}
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
@@ -256,7 +245,7 @@ export default function CheckoutPage() {
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
                     <span className="text-emerald-700">
-                      KES {cartTotal.toFixed(2)}
+                      KES {cartTotal.toFixed(0)} {/* Changed toFixed(2) to toFixed(0) */}
                     </span>
                   </div>
                 </div>

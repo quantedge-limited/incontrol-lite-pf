@@ -12,11 +12,11 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
-  const { cart } = useCart(); // Changed from 'items' to 'cart'
+  const { items, cartCount } = useCart(); // Use items and cartCount
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Calculate total items from cart - with safe optional chaining
-  const totalItems = cart?.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
+  // Calculate total items from items array or use cartCount
+  const totalItems = cartCount || items?.reduce((total, item) => total + item.quantity, 0) || 0;
 
   return (
     <header className="sticky top-0 z-30 w-full bg-white shadow-md">

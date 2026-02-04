@@ -111,7 +111,10 @@ export default function SalesDashboard() {
   const calculateStatsFromSales = (onlineSales: Sale[], posSales: any[]): SalesStats => {
     const allSales = [...onlineSales, ...posSales];
     
-    const totalRevenue = allSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+    // Convert string amounts to numbers before summing
+    const totalRevenue = allSales.reduce((sum, sale) => 
+      sum + (Number(sale.total_amount) || 0), 0);
+    
     const totalSales = allSales.length;
     const avgOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
     
@@ -125,8 +128,9 @@ export default function SalesDashboard() {
                        (now.getMonth() - saleDate.getMonth());
       
       if (monthsAgo >= 0 && monthsAgo < 12) {
-        monthlyTrend[11 - monthsAgo] += (sale.total_amount || 0);
+        monthlyTrend[11 - monthsAgo] += (Number(sale.total_amount) || 0);
       }
+
     });
 
     // Calculate recent sales (last 30 days)
@@ -181,7 +185,7 @@ export default function SalesDashboard() {
             d.getMonth() === m.monthIndex
           );
         })
-        .reduce((a, b) => a + b.total_amount, 0)
+        .reduce((a, b) => a + (Number(b.total_amount) || 0), 0) // Convert to number
     );
 
     // Calculate POS sales totals
@@ -194,7 +198,7 @@ export default function SalesDashboard() {
             d.getMonth() === m.monthIndex
           );
         })
-        .reduce((a, b) => a + b.total_amount, 0)
+        .reduce((a, b) => a + (Number(b.total_amount) || 0), 0) // Convert to number
     );
 
     return {
@@ -219,8 +223,9 @@ export default function SalesDashboard() {
   const combinedSales = [...filteredSales, ...posSales.slice(0, 5)];
   const displaySales = combinedSales.slice(0, 10); // Show first 10 sales
   
+  // Change the totalRevenue calculation:
   const totalRevenue = stats?.total_revenue || 
-    [...sales, ...posSales].reduce((a, b) => a + (b.total_amount || 0), 0);
+    [...sales, ...posSales].reduce((a, b) => a + (Number(b.total_amount) || 0), 0);
 
   async function addSale(saleData: any) {
     try {

@@ -3,18 +3,19 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useCart } from '@/context/cart/CartContext';
 
 interface ProductCardProps {
-  id: number | string;
-  name: string;  // Changed back to match ProductsList
-  price: number;  // Changed back to match ProductsList
+  id: number;
+  name: string;
+  price: number;
   description?: string;
-  quantity: number;  // Changed back to match ProductsList
+  quantity: number;
   inStock: boolean;
   image?: string;
-  category?: string;  // Changed from object to string
+  category?: string;
   is_active: boolean;
-  onAddToCart?: (product: any) => void;
+  brand_name?: string; // Add brand name
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -27,24 +28,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   image,
   category,
   is_active,
-  onAddToCart,
+  brand_name,
 }) => {
+  const { addItem } = useCart();
+
   const handleAddToCart = () => {
-    const product = {
-      id,
-      name,
-      price,
-      description,
-      quantity,
-      inStock,
+    const cartItem = {
+      product_id: id,
+      product_name: name,
+      brand_name: brand_name || 'Unknown Brand', // Provide default brand name
+      quantity: 1,
+      unit_price: price,
       image_path: image,
-      brand: name,
-      category,
     };
     
-    if (onAddToCart) {
-      onAddToCart(product);
-    }
+    addItem(cartItem);
   };
 
   // Build image URL if it's a relative path
@@ -69,6 +67,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             src={imageUrl}
             alt={name}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.src = '/images/placeholder.jpg';
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-400">

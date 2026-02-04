@@ -1,4 +1,4 @@
-// components/admin/sales/SalesDashboard.tsx - FIXED FOR DJANGO BACKEND
+// components/admin/sales/SalesDashboard.tsx - ONLY FIX INVENTORY API CALLS
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +19,7 @@ import SalesChart from "./SalesChart";
 import SalesFilters from "./SalesFilters";
 import SalesTable from "./SalesTable";
 import { salesApi } from "@/lib/api/salesApi";
-import { inventoryApi } from "@/lib/api/inventoryApi";
+import { inventoryApi } from "@/lib/api/inventoryApi"; // Use the corrected API
 import { toast } from "react-toastify";
 import type { Sale, SalesStats } from "@/lib/api/salesApi";
 
@@ -59,11 +59,10 @@ export default function SalesDashboard() {
           return;
         }
 
-        // Fetch sales, POS sales, and inventory in parallel
-        const [salesData, posSalesData, inventoryData] = await Promise.all([
-          salesApi.getSales().catch(() => ({ results: [], count: 0 })),
-          salesApi.getPOSSales().catch(() => []),
-          inventoryApi.getProducts().catch(() => []),
+        // Fetch orders (sales) and inventory in parallel
+        const [ordersData, inventoryData] = await Promise.all([
+          salesApi.getOrders().catch(() => []),
+          inventoryApi.getProducts().catch(() => []), // FIXED: Changed from .list() to .getProducts()
         ]);
 
         // Extract sales from the response

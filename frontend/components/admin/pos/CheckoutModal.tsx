@@ -4,7 +4,7 @@
 import { motion } from 'framer-motion';
 import { X, CreditCard, Smartphone, Wallet, User, Phone, Mail, MapPin } from 'lucide-react';
 import { useState } from 'react';
-import { POSCartItem, CustomerData } from '@/types/pos';
+import { POSCartItem, CustomerData } from '@/types/pos'; // Or from '@/components/admin/pos/types'
 
 interface CheckoutModalProps {
   onClose: () => void;
@@ -44,6 +44,7 @@ export default function CheckoutModal({
       name: customerName,
       phone: customerPhone,
       email: customerEmail || undefined,
+      paymentMethod: paymentMethod || undefined, // Make optional
       address: customerAddress || undefined,
       payment_method: paymentMethod,
     };
@@ -65,28 +66,9 @@ export default function CheckoutModal({
     { id: 'mobile_money' as const, name: 'M-Pesa', icon: Smartphone },
   ];
 
+  // Calculate item totals for display
   const calculateItemTotal = (item: POSCartItem) => {
     return item.price * item.quantity;
-  };
-
-  const handleQuickCustomer = (type: 'walkin' | 'regular' | 'corporate') => {
-    switch (type) {
-      case 'walkin':
-        setCustomerName('Walk-in Customer');
-        setCustomerAddress('In-store pickup');
-        setExistingClientId(undefined);
-        break;
-      case 'regular':
-        setCustomerName('Regular Customer');
-        setCustomerPhone('0712345678');
-        setCustomerAddress('123 Main Street, Nairobi');
-        break;
-      case 'corporate':
-        setCustomerName('Corporate Client');
-        setCustomerEmail('corporate@example.com');
-        setCustomerAddress('Corporate Office, Westlands');
-        break;
-    }
   };
 
   return (
@@ -97,14 +79,11 @@ export default function CheckoutModal({
         exit={{ opacity: 0, scale: 0.95 }}
         className="bg-white rounded-lg shadow-lg max-w-4xl w-full my-auto"
       >
-        <div className="flex flex-col lg:flex-row h-full">
+        <div className="flex h-full flex-col lg:flex-row">
           {/* Left Side - Order Summary */}
-          <div className="flex-1 p-4 sm:p-6">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">POS Checkout</h2>
-                <p className="text-sm text-gray-600">Served by: {servedBy}</p>
-              </div>
+          <div className="flex-1 p-6 lg:p-8 overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-lg"
@@ -119,14 +98,14 @@ export default function CheckoutModal({
               <h3 className="font-semibold text-gray-700 mb-3">Order Items</h3>
               <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                 {cart.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{item.name}</p>
-                      <p className="text-xs text-gray-600">
+                  <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-sm text-gray-600">
                         {item.quantity} × {formatCurrency(item.price)}
                       </p>
                     </div>
-                    <p className="font-bold text-sm ml-2">
+                    <p className="font-bold">
                       {formatCurrency(calculateItemTotal(item))}
                     </p>
                   </div>
@@ -154,24 +133,35 @@ export default function CheckoutModal({
             <div className="grid grid-cols-3 gap-2 mb-4">
               <button
                 type="button"
-                onClick={() => handleQuickCustomer('walkin')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-xs sm:text-sm"
+                onClick={() => {
+                  setCustomerName('Walk-in Customer');
+                  setCustomerAddress('In-store pickup');
+                }}
+                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                 disabled={loading}
               >
                 Walk-in
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickCustomer('regular')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-xs sm:text-sm"
+                onClick={() => {
+                  setCustomerPhone('0712345678');
+                  setCustomerName('Regular Customer');
+                  setCustomerAddress('123 Main Street, Nairobi');
+                }}
+                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                 disabled={loading}
               >
                 Regular
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickCustomer('corporate')}
-                className="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-xs sm:text-sm"
+                onClick={() => {
+                  setCustomerEmail('corporate@example.com');
+                  setCustomerName('Corporate');
+                  setCustomerAddress('Corporate Office, Westlands');
+                }}
+                className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm"
                 disabled={loading}
               >
                 Corporate
@@ -180,8 +170,8 @@ export default function CheckoutModal({
           </div>
 
           {/* Right Side - Customer & Payment */}
-          <div className="flex-1 p-4 sm:p-6 bg-gray-50">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex-1 p-6 lg:p-8 bg-gradient-to-b from-emerald-50 to-white">
+            <form onSubmit={handleSubmit} className="space-y-6">
               {/* Customer Info */}
               <div>
                 <h3 className="font-semibold text-gray-700 mb-3">Customer Info</h3>
@@ -203,7 +193,7 @@ export default function CheckoutModal({
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
                       type="tel"
-                      placeholder="Phone Number"
+                      placeholder="Phone Number *"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhone(e.target.value)}
                       className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-sm"

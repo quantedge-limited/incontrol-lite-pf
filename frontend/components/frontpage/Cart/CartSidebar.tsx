@@ -19,21 +19,20 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
     setIsMounted(true);
   }, []);
   
-  if (!isMounted) {
-    return null;
-  }
+  if (!isMounted) return null;
   
   const cartItems = items || [];
-  
-  // Calculate subtotal, tax, and total
+
+  // Calculate subtotal, transport fee, and total
   const subtotal = getCartTotal();
-  const tax = subtotal * 0.16; // 16% VAT
-  const total = subtotal + tax;
+  const transportFee = 200; // Fixed transport fee in KES
+  const total = subtotal + transportFee;
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
+          {/* Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -42,6 +41,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
           />
 
+          {/* Sidebar */}
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -75,7 +75,7 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
                 </div>
               ) : (
                 <div className="space-y-4">
-                  { cartItems.map((item) => (
+                  {cartItems.map((item) => (
                     <div key={item.cartItemId || `${item.product_id}-${Date.now()}`} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                       <div className="flex gap-4">
                         <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-lg flex items-center justify-center">
@@ -152,8 +152,8 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onChe
                     <span className="font-medium">KES {subtotal.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
-                    <span>Tax (16% VAT)</span>
-                    <span className="font-medium">KES {tax.toFixed(0)}</span>
+                    <span>Transport</span>
+                    <span className="font-medium">KES {transportFee.toFixed(0)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold text-gray-900 pt-3 border-t">
                     <span>Total</span>

@@ -136,7 +136,7 @@ async function apiRequest<T>(
 export const salesApi = {
   // Create a new sale (online)
   createSale: (saleData: CreateSaleDto): Promise<Sale> =>
-    apiRequest<Sale>('/sales/', {
+    apiRequest<Sale>('payments/create-payment/', {
       method: 'POST',
       body: JSON.stringify(saleData),
     }),
@@ -159,23 +159,6 @@ export const salesApi = {
     
     return apiRequest<{ results: Sale[]; count: number }>(url);
   },
-
-  // Get single sale
-  getSale: (id: number): Promise<Sale> =>
-    apiRequest<Sale>(`/sales/${id}/`),
-
-  // Update sale status
-  updateSaleStatus: (id: number, status: string): Promise<Sale> =>
-    apiRequest<Sale>(`/sales/${id}/`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    }),
-
-  // Delete sale
-  deleteSale: (id: number): Promise<void> =>
-    apiRequest<void>(`/sales/${id}/`, {
-      method: 'DELETE',
-    }),
 
   // -------------------
   // POS SALES API

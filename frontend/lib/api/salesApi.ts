@@ -136,7 +136,7 @@ async function apiRequest<T>(
 export const salesApi = {
   // Create a new sale (online)
   createSale: (saleData: CreateSaleDto): Promise<Sale> =>
-    apiRequest<Sale>('payments/create-payment/', {
+    apiRequest<Sale>('/payments/create-payment/', {
       method: 'POST',
       body: JSON.stringify(saleData),
     }),

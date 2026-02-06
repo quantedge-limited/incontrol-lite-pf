@@ -50,7 +50,7 @@ export default function Checkout() {
         try {
           const payment = await pollPaymentStatus(paymentResponse.checkout_request_id);
           
-          if (payment.status === 'completed') {
+          if (payment.status === 'success') {
             toast.success("Payment completed successfully!");
             return { success: true, payment };
           } else {

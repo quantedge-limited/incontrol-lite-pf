@@ -1,14 +1,15 @@
 // lib/api/paymentsApi.ts - Updated for M-Pesa integration
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export interface Payment {
   id: number;
   sale: number; // Sale ID
-  mpesa_transaction_id?: string;
-  mpesa_checkout_request_id?: string;
+  transaction_id?: string;        // M-Pesa CheckoutRequestID
+  merchant_request_id?: string;
+  checkout_request_id?: string;
   phone_number: string;
   amount: number;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'success' | 'failed';
   created_at: string;
 }
 
@@ -32,13 +33,9 @@ async function apiRequest<T>(
 ): Promise<T> {
   const token = localStorage.getItem('access_token');
   
-  const headers: Record<string, string> = { 
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -64,12 +61,12 @@ async function apiRequest<T>(
 export const paymentsApi = {
   // Initiate M-Pesa payment (STK Push)
   initiatePayment: (paymentData: CreateMpesaPaymentRequest): Promise<CreateMpesaPaymentResponse> =>
-    apiRequest<CreateMpesaPaymentResponse>('/payments/initiate-mpesa/', {
+    apiRequest<CreateMpesaPaymentResponse>('/payments/create-payment/', {
       method: 'POST',
       body: JSON.stringify(paymentData),
     }),
 
-  // Check M-Pesa payment status
+  // Check M-Pesa payment status by CheckoutRequestID
   checkPaymentStatus: (checkoutRequestId: string): Promise<Payment> =>
     apiRequest<Payment>(`/payments/mpesa-status/${checkoutRequestId}/`, {
       method: 'GET',
@@ -83,9 +80,7 @@ export const paymentsApi = {
 
   // Get all payments
   getPayments: (): Promise<Payment[]> =>
-    apiRequest<Payment[]>('/payments/', {
-      method: 'GET',
-    }),
+    apiRequest<Payment[]>('/payments/', { method: 'GET' }),
 };
 
 // M-Pesa payment status polling
@@ -99,17 +94,13 @@ export async function pollPaymentStatus(
     
     const poll = async () => {
       attempts++;
-      
       try {
         const payment = await paymentsApi.checkPaymentStatus(checkoutRequestId);
-        
-        // If payment is completed or failed, resolve
-        if (payment.status === 'completed' || 
-            payment.status === 'failed' ||
-            attempts >= maxAttempts) {
+
+        // Resolve if completed, failed, or max attempts reached
+        if (payment.status === 'success' || payment.status === 'failed' || attempts >= maxAttempts) {
           resolve(payment);
         } else {
-          // Continue polling
           setTimeout(poll, interval);
         }
       } catch (error) {
@@ -120,7 +111,7 @@ export async function pollPaymentStatus(
         }
       }
     };
-    
+
     poll();
   });
 }

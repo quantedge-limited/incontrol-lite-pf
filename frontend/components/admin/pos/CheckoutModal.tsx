@@ -78,7 +78,7 @@ export default function CheckoutModal({
         break;
       case 'regular':
         setCustomerName('Regular Customer');
-        setCustomerPhone('0712345678');
+        setCustomerPhone('07********');
         setCustomerAddress('123 Main Street, Nairobi');
         break;
       case 'corporate':
